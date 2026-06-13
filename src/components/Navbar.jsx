@@ -1,0 +1,263 @@
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Search, User, Heart, ShoppingBag, Menu, X, ChevronDown } from 'lucide-react';
+import { useCart }  from '../context/CartContext';
+import { useAuth }  from '../context/AuthContext';
+
+const navLinks = [
+  { label: 'Women', href: '/products?gender=women', sub: ['Boubous', 'Gowns', 'Ankara', 'Perfumes'] },
+  { label: 'Men',   href: '/products?gender=men',   sub: ['Agbada', 'Kaftan', 'Babariga', 'Senator'] },
+  { label: 'Sale',  href: '/products?badge=Sale',   isSale: true },
+];
+
+export default function Navbar() {
+  const { cartCount }      = useCart();
+  const { user, logout }   = useAuth();
+  const navigate           = useNavigate();
+  const location           = useLocation();
+  const [scrolled, setScrolled]     = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ]       = useState('');
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const searchRef = useRef(null);
+  const dropTimer = useRef(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // close mobile on route change
+  useEffect(() => { setMobileOpen(false); setSearchOpen(false); }, [location.pathname]);
+
+  // focus search input when opened
+  useEffect(() => {
+    if (searchOpen) setTimeout(() => searchRef.current?.focus(), 50);
+  }, [searchOpen]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQ.trim()) {
+      navigate(`/products?q=${encodeURIComponent(searchQ.trim())}`);
+      setSearchOpen(false);
+      setSearchQ('');
+    }
+  };
+
+  const openDrop  = (label) => { clearTimeout(dropTimer.current); setActiveDropdown(label); };
+  const closeDrop = ()      => { dropTimer.current = setTimeout(() => setActiveDropdown(null), 150); };
+
+  const isTransparent = !scrolled && location.pathname === '/';
+
+  return (
+    <>
+      {/* ── top announcement bar ── */}
+      <div className="bg-charcoal-900 text-stone-200 text-center py-2 text-xs font-body tracking-wider">
+        Free shipping on orders over ₦30,000 &nbsp;·&nbsp; <Link to="/faq" className="underline underline-offset-2">Size guide</Link>
+      </div>
+
+      {/* ── main nav ── */}
+      <header className={`sticky top-0 z-50 transition-all duration-300 ${
+        isTransparent
+          ? 'bg-transparent border-b border-transparent'
+          : scrolled
+            ? 'bg-white/95 backdrop-blur-md border-b border-stone-200 shadow-soft'
+            : 'bg-white border-b border-stone-200'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+
+          {/* logo */}
+          <Link to="/" className="shrink-0">
+            <span className="font-script text-3xl text-charcoal-800 leading-none">Nura Bahar</span>
+          </Link>
+
+          {/* desktop nav */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navLinks.map(link => (
+              <div key={link.label}
+                className="relative"
+                onMouseEnter={() => link.sub && openDrop(link.label)}
+                onMouseLeave={() => link.sub && closeDrop()}
+              >
+                <Link
+                  to={link.href}
+                  className={`flex items-center gap-1 px-4 py-2 font-body text-sm font-medium transition-colors duration-150 ${
+                    link.isSale
+                      ? 'text-blush-500 hover:text-blush-600'
+                      : 'text-charcoal-800 hover:text-blush-500'
+                  }`}
+                >
+                  {link.label}
+                  {link.sub && <ChevronDown size={13} className="opacity-60 mt-0.5" />}
+                </Link>
+
+                {/* dropdown */}
+                {link.sub && activeDropdown === link.label && (
+                  <div className="absolute top-full left-0 pt-1 z-50"
+                    onMouseEnter={() => openDrop(link.label)}
+                    onMouseLeave={() => closeDrop()}
+                  >
+                    <div className="bg-white border border-stone-200 shadow-card min-w-[180px] py-2">
+                      {link.sub.map(cat => (
+                        <Link
+                          key={cat}
+                          to={`/products?category=${cat}`}
+                          className="block px-5 py-2.5 font-body text-sm text-charcoal-700 hover:bg-stone-50 hover:text-charcoal-900 transition-colors"
+                        >
+                          {cat}
+                        </Link>
+                      ))}
+                      <div className="border-t border-stone-100 mt-1 pt-1">
+                        <Link
+                          to={link.href}
+                          className="block px-5 py-2.5 font-body text-xs text-blush-500 hover:bg-stone-50 tracking-wider uppercase"
+                        >
+                          View All {link.label}
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            <Link to="/faq"
+              className="px-4 py-2 font-body text-sm font-medium text-charcoal-800 hover:text-blush-500 transition-colors">
+              FAQ
+            </Link>
+          </nav>
+
+          {/* right icons */}
+          <div className="flex items-center gap-1">
+            {/* search */}
+            <button
+              onClick={() => setSearchOpen(s => !s)}
+              className="w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors"
+              aria-label="Search"
+            >
+              <Search size={18} />
+            </button>
+
+            {/* account */}
+            {user ? (
+              <div className="relative group">
+                <button className="w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors">
+                  <User size={18} />
+                </button>
+                <div className="absolute top-full right-0 pt-1 hidden group-hover:block z-50">
+                  <div className="bg-white border border-stone-200 shadow-card min-w-[160px] py-2">
+                    <p className="px-4 py-2 font-body text-xs text-charcoal-700/60 border-b border-stone-100 mb-1">{user.email}</p>
+                    <button
+                      onClick={logout}
+                      className="block w-full text-left px-4 py-2 font-body text-sm text-charcoal-700 hover:bg-stone-50 hover:text-blush-500 transition-colors"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Link to="/login" className="w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors" aria-label="Login">
+                <User size={18} />
+              </Link>
+            )}
+
+            {/* wishlist placeholder */}
+            <button className="hidden sm:flex w-9 h-9 items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors" aria-label="Wishlist">
+              <Heart size={18} />
+            </button>
+
+            {/* cart */}
+            <Link to="/cart" className="relative w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors" aria-label="Cart">
+              <ShoppingBag size={18} />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] bg-blush-500 text-white text-[10px] font-body font-semibold flex items-center justify-center rounded-full px-0.5">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
+            </Link>
+
+            {/* mobile hamburger */}
+            <button
+              onClick={() => setMobileOpen(o => !o)}
+              className="lg:hidden w-9 h-9 flex items-center justify-center text-charcoal-800"
+              aria-label="Menu"
+            >
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </div>
+
+        {/* ── search bar ── */}
+        {searchOpen && (
+          <div className="border-t border-stone-200 bg-white animate-fade-in">
+            <form onSubmit={handleSearch} className="max-w-2xl mx-auto px-6 py-4 flex gap-3">
+              <input
+                ref={searchRef}
+                type="text"
+                value={searchQ}
+                onChange={e => setSearchQ(e.target.value)}
+                placeholder="Search products…"
+                className="flex-1 border-b border-charcoal-800 bg-transparent font-body text-sm text-charcoal-800 pb-1.5 focus:outline-none placeholder-stone-400"
+              />
+              <button type="submit" className="font-body text-xs tracking-widest uppercase text-charcoal-800 hover:text-blush-500 transition-colors pb-1.5">
+                Search
+              </button>
+              <button type="button" onClick={() => setSearchOpen(false)} className="text-charcoal-700/40 hover:text-charcoal-800 pb-1.5">
+                <X size={16} />
+              </button>
+            </form>
+          </div>
+        )}
+      </header>
+
+      {/* ── mobile drawer ── */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-40 flex">
+          {/* backdrop */}
+          <div className="absolute inset-0 bg-charcoal-900/40" onClick={() => setMobileOpen(false)} />
+          {/* drawer */}
+          <div className="relative ml-auto w-72 h-full bg-white flex flex-col shadow-lift animate-slide-in">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200">
+              <span className="font-script text-2xl text-charcoal-800">Nura Bahar</span>
+              <button onClick={() => setMobileOpen(false)}><X size={20} className="text-charcoal-700" /></button>
+            </div>
+            <nav className="flex-1 overflow-y-auto py-4">
+              {navLinks.map(link => (
+                <div key={link.label}>
+                  <Link
+                    to={link.href}
+                    className={`flex items-center justify-between px-6 py-3.5 font-body text-sm font-medium border-b border-stone-100 ${link.isSale ? 'text-blush-500' : 'text-charcoal-800'}`}
+                  >
+                    {link.label}
+                  </Link>
+                  {link.sub && link.sub.map(cat => (
+                    <Link
+                      key={cat}
+                      to={`/products?category=${cat}`}
+                      className="block pl-10 pr-6 py-2.5 font-body text-sm text-charcoal-700/70 hover:text-charcoal-900 border-b border-stone-50"
+                    >
+                      {cat}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+              <Link to="/faq" className="block px-6 py-3.5 font-body text-sm font-medium text-charcoal-800 border-b border-stone-100">FAQ</Link>
+            </nav>
+            <div className="px-6 py-5 border-t border-stone-200 flex flex-col gap-3">
+              {user ? (
+                <>
+                  <p className="font-body text-xs text-charcoal-700/60">{user.email}</p>
+                  <button onClick={logout} className="btn-outline w-full">Sign out</button>
+                </>
+              ) : (
+                <Link to="/login" className="btn-primary w-full text-center">Login / Register</Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
