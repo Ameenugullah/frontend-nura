@@ -336,7 +336,7 @@ export default function Checkout() {
                       <div className="w-14 h-16 bg-stone-100 overflow-hidden">
                         <img src={item.images?.[0] || '/fallback.jpg'} alt={item.name}
                           className="w-full h-full object-cover"
-                          onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1558171813-5e3d4e0c64ae?w=100&q=60'; }}
+                          onError={e => { e.target.onerror = null; e.target.src = '/images/fallback.svg'; }}
                         />
                       </div>
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-charcoal-800 text-white text-[9px] font-body font-bold rounded-full flex items-center justify-center">

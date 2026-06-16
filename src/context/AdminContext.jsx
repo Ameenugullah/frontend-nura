@@ -6,13 +6,12 @@ import {
   getOrders, updateOrderStatus, deleteOrder as apiDeleteOrder,
   getUsers, checkPBHealth,
 } from '../lib/api';
-import { allProducts as staticProducts } from '../data/products';
 
 const AdminContext = createContext(null);
 
 export function AdminProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn]   = useState(isAdminLoggedIn());
-  const [pbProducts, setPbProducts]   = useState(staticProducts);
+  const [pbProducts, setPbProducts]   = useState([]);
   const [orders, setOrders]           = useState([]);
   const [users, setUsers]             = useState([]);
   const [loginError, setLoginError]   = useState('');
@@ -27,13 +26,13 @@ export function AdminProvider({ children }) {
       setPbConnected(alive);
       if (alive) {
         const data = await getProducts();
-        setPbProducts(data.length > 0 ? data : staticProducts);
+        setPbProducts(data);
       } else {
-        setPbProducts(staticProducts);
+        setPbProducts([]);
       }
     } catch {
       setPbConnected(false);
-      setPbProducts(staticProducts);
+      setPbProducts([]);
     } finally {
       setLoading(false);
     }
@@ -43,10 +42,9 @@ export function AdminProvider({ children }) {
     try {
       const data = await getOrders();
       setOrders(data);
-      // compute quick stats
-      const revenue      = data.filter(o => o.status === 'delivered').reduce((s, o) => s + (o.total || 0), 0);
-      const totalOrders  = data.length;
-      const pendingOrders= data.filter(o => o.status === 'pending').length;
+      const revenue       = data.filter(o => o.status === 'delivered').reduce((s, o) => s + (o.total || 0), 0);
+      const totalOrders   = data.length;
+      const pendingOrders = data.filter(o => o.status === 'pending').length;
       setStats({ revenue, totalOrders, pendingOrders });
     } catch (err) {
       console.warn('Could not load orders:', err.message);
@@ -57,7 +55,7 @@ export function AdminProvider({ children }) {
     try {
       const data = await getUsers();
       setUsers(data);
-    } catch { /* silently fail if no admin auth */ }
+    } catch { /* silently fail */ }
   }, []);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
@@ -85,52 +83,66 @@ export function AdminProvider({ children }) {
   }, []);
 
   const addProduct = useCallback(async (product) => {
-    if (pbConnected) {
-      try {
-        const p = await createProduct(product);
-        setPbProducts(prev => [p, ...prev]);
-        return p;
-      } catch (err) { console.error(err); }
+    if (!pbConnected) {
+      console.warn('PocketBase is offline — cannot add product.');
+      return null;
     }
-    const p = { ...product, id: `local-${Date.now()}`, rating: 5, reviews: 0, stock: product.stock || 10 };
-    setPbProducts(prev => [p, ...prev]);
-    return p;
+    try {
+      const p = await createProduct(product);
+      setPbProducts(prev => [p, ...prev]);
+      return p;
+    } catch (err) {
+      console.error('Failed to create product:', err);
+      // Bubble up the error so the UI can show a message and we can inspect details
+      throw err;
+    }
   }, [pbConnected]);
 
   const editProduct = useCallback(async (id, data) => {
-    if (pbConnected) {
-      try {
-        const p = await updateProduct(id, data);
-        setPbProducts(prev => prev.map(x => x.id === id ? p : x));
-        return p;
-      } catch (err) { console.error(err); }
+    if (!pbConnected) {
+      console.warn('PocketBase is offline — cannot edit product.');
+      return null;
     }
-    setPbProducts(prev => prev.map(x => x.id === id ? { ...x, ...data } : x));
+    try {
+      const p = await updateProduct(id, data);
+      setPbProducts(prev => prev.map(x => x.id === id ? p : x));
+      return p;
+    } catch (err) {
+      console.error('Failed to update product:', err);
+      return null;
+    }
   }, [pbConnected]);
 
   const removeProduct = useCallback(async (id) => {
-    if (pbConnected) {
-      try { await apiDeleteProduct(id); } catch (err) { console.error(err); }
+    if (!pbConnected) {
+      console.warn('PocketBase is offline — cannot delete product.');
+      return;
     }
-    setPbProducts(prev => prev.filter(p => p.id !== id));
+    try {
+      await apiDeleteProduct(id);
+      setPbProducts(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      console.error('Failed to delete product:', err);
+    }
   }, [pbConnected]);
 
   const updateStock = useCallback(async (id, stock) => {
-    if (pbConnected) {
-      try { await apiUpdateStock(id, stock); } catch (err) { console.error(err); }
+    if (!pbConnected) return;
+    try {
+      await apiUpdateStock(id, stock);
+      setPbProducts(prev => prev.map(p => p.id === id ? { ...p, stock: Number(stock) } : p));
+    } catch (err) {
+      console.error('Failed to update stock:', err);
     }
-    setPbProducts(prev => prev.map(p => p.id === id ? { ...p, stock: Number(stock) } : p));
   }, [pbConnected]);
 
   const getStock = useCallback((id) => {
-    return pbProducts.find(p => p.id === id)?.stock ?? 10;
+    return pbProducts.find(p => p.id === id)?.stock ?? 0;
   }, [pbProducts]);
 
   const changeOrderStatus = useCallback(async (id, status) => {
     try {
       await updateOrderStatus(id, status);
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-      // refresh stats
       setOrders(prev => {
         const updated = prev.map(o => o.id === id ? { ...o, status } : o);
         const revenue       = updated.filter(o => o.status === 'delivered').reduce((s, o) => s + (o.total || 0), 0);
@@ -139,14 +151,18 @@ export function AdminProvider({ children }) {
         setStats({ revenue, totalOrders, pendingOrders });
         return updated;
       });
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error('Failed to update order status:', err);
+    }
   }, []);
 
   const removeOrder = useCallback(async (id) => {
     try {
       await apiDeleteOrder(id);
       setOrders(prev => prev.filter(o => o.id !== id));
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error('Failed to delete order:', err);
+    }
   }, []);
 
   return (

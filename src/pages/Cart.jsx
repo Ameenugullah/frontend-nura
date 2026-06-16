@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
-const FALLBACK = 'https://images.unsplash.com/photo-1558171813-5e3d4e0c64ae?w=200&q=60';
+const FALLBACK = '/images/fallback.svg';
 
 export default function Cart() {
   const { cartItems, removeFromCart, updateQuantity, subtotal, cartCount } = useCart();

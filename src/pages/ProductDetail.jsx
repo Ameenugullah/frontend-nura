@@ -5,7 +5,7 @@ import { useAdmin } from '../context/AdminContext';
 import { useCart }  from '../context/CartContext';
 import ProductCard  from '../components/ProductCard';
 
-const FALLBACK = 'https://images.unsplash.com/photo-1558171813-5e3d4e0c64ae?w=600&q=60';
+const FALLBACK = '/images/fallback.svg';
 
 export default function ProductDetail() {
   const { id }          = useParams();

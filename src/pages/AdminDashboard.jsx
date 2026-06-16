@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Settings,
-  LogOut, Menu, X, Plus, Pencil, Trash2, Search, ChevronDown,
+  LogOut, Menu, X, Plus, Pencil, Trash2, Search, Upload,
   TrendingUp, AlertTriangle, CheckCircle, Clock, Eye,
   RefreshCw, Wifi, WifiOff,
 } from 'lucide-react';
@@ -40,29 +40,35 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-charcoal-900 flex items-center justify-center px-6">
+    <div className="flex items-center justify-center min-h-screen px-6 bg-charcoal-900">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <span className="font-script text-4xl text-white">Nura Bahar</span>
+        <div className="mb-8 text-center">
+          <span className="text-4xl text-white font-script">Nura Bahar</span>
           <p className="font-body text-xs tracking-[0.2em] uppercase text-stone-400 mt-2">Admin Dashboard</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white p-8 space-y-4">
-          <h2 className="font-display text-2xl text-charcoal-800 font-light mb-2">Sign In</h2>
+        <form onSubmit={handleSubmit} className="p-8 space-y-4 bg-white">
+          <h2 className="mb-2 text-2xl font-light font-display text-charcoal-800">Sign In</h2>
           <div>
             <label className="font-body text-xs tracking-wider uppercase text-stone-500 block mb-1.5">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="admin@nurabahar.ng" className="input-field" required />
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="admin@nurabahar.ng" className="input-field" required
+              autoComplete="username"
+            />
           </div>
           <div>
             <label className="font-body text-xs tracking-wider uppercase text-stone-500 block mb-1.5">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••" className="input-field" required />
+            <input
+              type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" className="input-field" required
+              autoComplete="current-password"
+            />
           </div>
-          {loginError && <p className="font-body text-xs text-blush-500">{loginError}</p>}
-          <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-3 disabled:opacity-60">
+          {loginError && <p className="text-xs font-body text-blush-500">{loginError}</p>}
+          <button type="submit" disabled={loading} className="justify-center w-full py-3 btn-primary disabled:opacity-60">
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
-          <p className="font-body text-xs text-stone-400 text-center pt-1">
+          <p className="pt-1 text-xs text-center font-body text-stone-400">
             Admin credentials set in PocketBase settings.
           </p>
         </form>
@@ -87,13 +93,12 @@ function AdminSidebar({ mobile, onClose }) {
     <aside className={`flex flex-col bg-charcoal-900 ${mobile ? 'h-full' : 'w-60 min-h-screen sticky top-0'}`}>
       <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
         <div>
-          <span className="font-script text-2xl text-white leading-none">Nura Bahar</span>
+          <span className="text-2xl leading-none text-white font-script">Nura Bahar</span>
           <p className="font-body text-[10px] text-stone-500 tracking-widest uppercase">Admin</p>
         </div>
         {mobile && <button onClick={onClose}><X size={18} className="text-stone-400" /></button>}
       </div>
 
-      {/* PB connection indicator */}
       <div className="px-6 py-3 border-b border-white/10">
         <div className={`flex items-center gap-2 font-body text-[10px] tracking-wider uppercase ${pbConnected ? 'text-green-400' : 'text-amber-400'}`}>
           {pbConnected ? <Wifi size={11} /> : <WifiOff size={11} />}
@@ -101,7 +106,7 @@ function AdminSidebar({ mobile, onClose }) {
         </div>
       </div>
 
-      <nav className="flex-1 py-4 px-3">
+      <nav className="flex-1 px-3 py-4">
         {adminNav.map(({ label, icon: Icon, to }) => {
           const active = to === '/admin' ? location.pathname === '/admin' : location.pathname.startsWith(to);
           return (
@@ -116,7 +121,7 @@ function AdminSidebar({ mobile, onClose }) {
         })}
       </nav>
 
-      <div className="px-3 pb-6 border-t border-white/10 pt-4">
+      <div className="px-3 pt-4 pb-6 border-t border-white/10">
         <a href="http://localhost:8090/_/" target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-3 px-3 py-2.5 font-body text-xs text-stone-400 hover:text-white transition-colors mb-1">
           <Settings size={14} />
@@ -142,41 +147,39 @@ function DashboardHome() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl text-charcoal-800 font-light">Dashboard</h1>
+        <h1 className="text-3xl font-light font-display text-charcoal-800">Dashboard</h1>
         <button onClick={() => { refreshOrders(); refreshProducts(); }}
-          className="flex items-center gap-2 font-body text-xs text-stone-500 hover:text-charcoal-800 transition-colors">
+          className="flex items-center gap-2 text-xs transition-colors font-body text-stone-500 hover:text-charcoal-800">
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: 'Total Revenue',    value: `₦${stats.revenue.toLocaleString('en-NG')}`,    icon: TrendingUp,     color: 'bg-green-50 text-green-600' },
-          { label: 'Total Orders',     value: stats.totalOrders,    icon: ShoppingCart,   color: 'bg-blue-50 text-blue-600' },
-          { label: 'Pending Orders',   value: stats.pendingOrders,  icon: Clock,          color: 'bg-amber-50 text-amber-600' },
-          { label: 'Low Stock Items',  value: lowStock,             icon: AlertTriangle,  color: 'bg-red-50 text-red-600' },
+          { label: 'Total Revenue',   value: `₦${stats.revenue.toLocaleString('en-NG')}`, icon: TrendingUp,    color: 'bg-green-50 text-green-600' },
+          { label: 'Total Orders',    value: stats.totalOrders,   icon: ShoppingCart,  color: 'bg-blue-50 text-blue-600' },
+          { label: 'Pending Orders',  value: stats.pendingOrders, icon: Clock,         color: 'bg-amber-50 text-amber-600' },
+          { label: 'Low Stock Items', value: lowStock,            icon: AlertTriangle, color: 'bg-red-50 text-red-600' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white border border-stone-200 p-5">
+          <div key={label} className="p-5 bg-white border border-stone-200">
             <div className={`w-9 h-9 rounded-full flex items-center justify-center mb-3 ${color}`}>
               <Icon size={16} />
             </div>
-            <p className="font-display text-2xl text-charcoal-800 font-light">{value}</p>
+            <p className="text-2xl font-light font-display text-charcoal-800">{value}</p>
             <p className="font-body text-xs text-stone-400 mt-0.5">{label}</p>
           </div>
         ))}
       </div>
 
-      {/* recent orders */}
       <div className="bg-white border border-stone-200">
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-          <h3 className="font-body text-sm font-semibold text-charcoal-800">Recent Orders</h3>
-          <Link to="/admin/orders" className="font-body text-xs text-blush-500 hover:text-blush-600 transition-colors">
+          <h3 className="text-sm font-semibold font-body text-charcoal-800">Recent Orders</h3>
+          <Link to="/admin/orders" className="text-xs transition-colors font-body text-blush-500 hover:text-blush-600">
             View all →
           </Link>
         </div>
         {recent.length === 0 ? (
-          <p className="font-body text-xs text-stone-400 text-center py-10">No orders yet.</p>
+          <p className="py-10 text-xs text-center font-body text-stone-400">No orders yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -191,11 +194,11 @@ function DashboardHome() {
               </thead>
               <tbody>
                 {recent.map(o => (
-                  <tr key={o.id} className="border-t border-stone-100 hover:bg-stone-50 transition-colors">
-                    <td className="px-5 py-3 font-body text-xs text-charcoal-700 font-medium">NB-{o.id.slice(-6)}</td>
-                    <td className="px-5 py-3 font-body text-xs text-charcoal-700">{o.customerName}</td>
-                    <td className="px-5 py-3 font-body text-xs text-charcoal-700">₦{(o.total || 0).toLocaleString('en-NG')}</td>
-                    <td className="px-5 py-3 font-body text-xs text-charcoal-700 capitalize">{o.paymentMethod || '—'}</td>
+                  <tr key={o.id} className="transition-colors border-t border-stone-100 hover:bg-stone-50">
+                    <td className="px-5 py-3 text-xs font-medium font-body text-charcoal-700">NB-{o.id.slice(-6)}</td>
+                    <td className="px-5 py-3 text-xs font-body text-charcoal-700">{o.customerName}</td>
+                    <td className="px-5 py-3 text-xs font-body text-charcoal-700">₦{(o.total || 0).toLocaleString('en-NG')}</td>
+                    <td className="px-5 py-3 text-xs capitalize font-body text-charcoal-700">{o.paymentMethod || '—'}</td>
                     <td className="px-5 py-3"><StatusBadge status={o.status} /></td>
                   </tr>
                 ))}
@@ -205,12 +208,11 @@ function DashboardHome() {
         )}
       </div>
 
-      {/* low stock warning */}
       {lowStock > 0 && (
-        <div className="bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
+        <div className="flex items-start gap-3 p-4 border bg-amber-50 border-amber-200">
           <AlertTriangle size={16} className="text-amber-500 mt-0.5 shrink-0" />
           <div>
-            <p className="font-body text-xs font-semibold text-amber-700">{lowStock} product{lowStock > 1 ? 's' : ''} are running low on stock.</p>
+            <p className="text-xs font-semibold font-body text-amber-700">{lowStock} product{lowStock > 1 ? 's' : ''} are running low on stock.</p>
             <Link to="/admin/products" className="font-body text-xs text-amber-600 underline mt-0.5 inline-block">Manage Products</Link>
           </div>
         </div>
@@ -221,34 +223,89 @@ function DashboardHome() {
 
 // ── products panel ────────────────────────────────────────────────────────────
 function AdminProducts() {
-  const { adminProducts, addProduct, editProduct, deleteProduct, updateStock, loading } = useAdmin();
+  const { adminProducts, addProduct, editProduct, deleteProduct, updateStock } = useAdmin();
   const [search,     setSearch]     = useState('');
   const [showForm,   setShowForm]   = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [confirm,    setConfirm]    = useState(null);
+  const [saving,     setSaving]     = useState(false);
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: '', category: 'Gowns', gender: 'women',
     price: '', originalPrice: '', description: '',
     colors: '', sizes: '', badge: '', stock: '10', featured: false,
-  });
+  };
 
-  const openNew  = () => { setEditTarget(null); setForm({ name:'',category:'Gowns',gender:'women',price:'',originalPrice:'',description:'',colors:'',sizes:'',badge:'',stock:'10',featured:false }); setShowForm(true); };
-  const openEdit = (p) => { setEditTarget(p); setForm({ ...p, colors: Array.isArray(p.colors) ? p.colors.join(', ') : p.colors, sizes: Array.isArray(p.sizes) ? p.sizes.join(', ') : p.sizes, price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : '', stock: String(p.stock ?? 10) }); setShowForm(true); };
+  const [form,          setForm]          = useState(emptyForm);
+  const [imageFiles,    setImageFiles]    = useState([]);   // File objects to upload
+  const [imagePreviews, setImagePreviews] = useState([]);   // preview URLs (blob: for new, http: for existing)
+
+  const openNew = () => {
+    setEditTarget(null);
+    setForm(emptyForm);
+    setImageFiles([]);
+    setImagePreviews([]);
+    setShowForm(true);
+  };
+
+  const openEdit = (p) => {
+    setEditTarget(p);
+    setForm({
+      ...p,
+      colors: Array.isArray(p.colors) ? p.colors.join(', ') : (p.colors || ''),
+      sizes:  Array.isArray(p.sizes)  ? p.sizes.join(', ')  : (p.sizes  || ''),
+      price:         String(p.price),
+      originalPrice: p.originalPrice ? String(p.originalPrice) : '',
+      stock:         String(p.stock ?? 10),
+    });
+    setImageFiles([]);
+    setImagePreviews(p.images || []);
+    setShowForm(true);
+  };
+
+  const handleImagePick = (e) => {
+    const picked = Array.from(e.target.files);
+    if (!picked.length) return;
+    const combined = [...imageFiles, ...picked].slice(0, 6);
+    setImageFiles(combined);
+    const previews = combined.map((f, i) =>
+      i < imageFiles.length ? imagePreviews[i] : URL.createObjectURL(f)
+    );
+    setImagePreviews(previews);
+    // reset input so the same file can be picked again if removed
+    e.target.value = '';
+  };
+
+  const removeImage = (i) => {
+    // revoke blob URL to free memory
+    if (imagePreviews[i]?.startsWith('blob:')) URL.revokeObjectURL(imagePreviews[i]);
+    setImageFiles(prev => prev.filter((_, idx) => idx !== i));
+    setImagePreviews(prev => prev.filter((_, idx) => idx !== i));
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const data = {
-      ...form,
-      price:         Number(form.price),
-      originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
-      stock:         Number(form.stock),
-      colors: form.colors.split(',').map(c => c.trim()).filter(Boolean),
-      sizes:  form.sizes.split(',').map(s => s.trim()).filter(Boolean),
-    };
-    if (editTarget) await editProduct(editTarget.id, data);
-    else await addProduct(data);
-    setShowForm(false);
+    setSaving(true);
+    try {
+      const data = {
+        ...form,
+        price:         Number(form.price),
+        originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
+        stock:         Number(form.stock),
+        colors: form.colors.split(',').map(c => c.trim()).filter(Boolean),
+        sizes:  form.sizes.split(',').map(s => s.trim()).filter(Boolean),
+        imageFiles: imageFiles.length > 0 ? imageFiles : undefined,
+      };
+      if (editTarget) await editProduct(editTarget.id, data);
+      else await addProduct(data);
+      setShowForm(false);
+    } catch (err) {
+      console.error('Save product failed:', err);
+      // Show a helpful message to the admin and keep the form open for fixes
+      alert('Error saving product: ' + (err.message || 'Unknown error. Check console for details.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filtered = adminProducts.filter(p =>
@@ -258,24 +315,24 @@ function AdminProducts() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="font-display text-3xl text-charcoal-800 font-light">Products</h1>
-        <button onClick={openNew} className="btn-primary flex items-center gap-2 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-3xl font-light font-display text-charcoal-800">Products</h1>
+        <button onClick={openNew} className="flex items-center gap-2 py-2 btn-primary">
           <Plus size={15} /> Add Product
         </button>
       </div>
 
       {/* search */}
       <div className="relative max-w-sm">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+        <Search size={14} className="absolute -translate-y-1/2 left-3 top-1/2 text-stone-400" />
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search products…" className="input-field pl-9 text-sm" />
+          placeholder="Search products…" className="text-sm input-field pl-9" />
       </div>
 
       {/* table */}
-      <div className="bg-white border border-stone-200 overflow-x-auto">
+      <div className="overflow-x-auto bg-white border border-stone-200">
         <table className="w-full min-w-[640px]">
-          <thead className="bg-stone-50 border-b border-stone-200">
+          <thead className="border-b bg-stone-50 border-stone-200">
             <tr className="text-left font-body text-[10px] tracking-[0.15em] uppercase text-stone-400">
               <th className="px-5 py-3">Product</th>
               <th className="px-5 py-3">Category</th>
@@ -287,18 +344,30 @@ function AdminProducts() {
           </thead>
           <tbody>
             {filtered.map(p => (
-              <tr key={p.id} className="border-t border-stone-100 hover:bg-stone-50 transition-colors">
+              <tr key={p.id} className="transition-colors border-t border-stone-100 hover:bg-stone-50">
                 <td className="px-5 py-3">
-                  <p className="font-body text-xs font-medium text-charcoal-800">{p.name}</p>
-                  <p className="font-body text-[10px] text-stone-400">{p.gender}</p>
+                  <div className="flex items-center gap-3">
+                    {p.images?.[0] ? (
+                      <img src={p.images[0]} alt={p.name}
+                        className="object-cover w-10 h-10 border border-stone-200 shrink-0" />
+                    ) : (
+                      <div className="flex items-center justify-center w-10 h-10 border bg-stone-100 border-stone-200 shrink-0">
+                        <Package size={14} className="text-stone-400" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs font-medium font-body text-charcoal-800">{p.name}</p>
+                      <p className="font-body text-[10px] text-stone-400">{p.gender}</p>
+                    </div>
+                  </div>
                 </td>
-                <td className="px-5 py-3 font-body text-xs text-charcoal-700">{p.category}</td>
-                <td className="px-5 py-3 font-body text-xs text-charcoal-700">₦{p.price.toLocaleString('en-NG')}</td>
+                <td className="px-5 py-3 text-xs font-body text-charcoal-700">{p.category}</td>
+                <td className="px-5 py-3 text-xs font-body text-charcoal-700">₦{p.price.toLocaleString('en-NG')}</td>
                 <td className="px-5 py-3">
                   <input
                     type="number" min={0} value={p.stock ?? 10}
                     onChange={e => updateStock(p.id, e.target.value)}
-                    className="w-16 border border-stone-200 text-center font-body text-xs py-1 focus:outline-none focus:border-charcoal-700"
+                    className="w-16 py-1 text-xs text-center border border-stone-200 font-body focus:outline-none focus:border-charcoal-700"
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -313,15 +382,15 @@ function AdminProducts() {
                 <td className="px-5 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Link to={`/products/${p.id}`} target="_blank"
-                      className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-charcoal-800 transition-colors">
+                      className="flex items-center justify-center transition-colors w-7 h-7 text-stone-400 hover:text-charcoal-800">
                       <Eye size={13} />
                     </Link>
                     <button onClick={() => openEdit(p)}
-                      className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-charcoal-800 transition-colors">
+                      className="flex items-center justify-center transition-colors w-7 h-7 text-stone-400 hover:text-charcoal-800">
                       <Pencil size={13} />
                     </button>
                     <button onClick={() => setConfirm(p.id)}
-                      className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-blush-500 transition-colors">
+                      className="flex items-center justify-center transition-colors w-7 h-7 text-stone-400 hover:text-blush-500">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -329,7 +398,7 @@ function AdminProducts() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-10 font-body text-xs text-stone-400">No products found.</td></tr>
+              <tr><td colSpan={6} className="py-10 text-xs text-center font-body text-stone-400">No products found.</td></tr>
             )}
           </tbody>
         </table>
@@ -337,69 +406,142 @@ function AdminProducts() {
 
       {/* ── product form modal ── */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-charcoal-900/60 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-lg my-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-charcoal-900/60">
+          <div className="w-full max-w-lg p-6 my-8 bg-white">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-display text-xl text-charcoal-800 font-light">{editTarget ? 'Edit Product' : 'Add Product'}</h3>
+              <h3 className="text-xl font-light font-display text-charcoal-800">{editTarget ? 'Edit Product' : 'Add Product'}</h3>
               <button onClick={() => setShowForm(false)}><X size={18} className="text-stone-400" /></button>
             </div>
+
             <form onSubmit={handleSave} className="space-y-3">
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+
+                {/* name */}
                 <div className="sm:col-span-2">
                   <label className="label-xs">Name *</label>
-                  <input required value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} className="input-field text-sm" placeholder="Luna Dress" />
+                  <input required value={form.name}
+                    onChange={e => setForm(f => ({...f, name: e.target.value}))}
+                    className="text-sm input-field" placeholder="Luna Dress" />
                 </div>
+
+                {/* category + gender */}
                 <div>
                   <label className="label-xs">Category</label>
-                  <select value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))} className="input-field text-sm">
-                    {['Boubous','Gowns','Ankara','Perfumes','Agbada','Kaftan','Babariga','Senator'].map(c => <option key={c}>{c}</option>)}
+                  <select value={form.category}
+                    onChange={e => setForm(f => ({...f, category: e.target.value}))}
+                    className="text-sm input-field">
+                    {['Boubous','Gowns','Ankara','Perfumes','Agbada','Kaftan','Babariga','Senator'].map(c => (
+                      <option key={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="label-xs">Gender</label>
-                  <select value={form.gender} onChange={e => setForm(f => ({...f, gender: e.target.value}))} className="input-field text-sm">
+                  <select value={form.gender}
+                    onChange={e => setForm(f => ({...f, gender: e.target.value}))}
+                    className="text-sm input-field">
                     <option value="women">Women</option>
                     <option value="men">Men</option>
                   </select>
                 </div>
+
+                {/* price + original price */}
                 <div>
                   <label className="label-xs">Price (₦) *</label>
-                  <input required type="number" min={0} value={form.price} onChange={e => setForm(f => ({...f, price: e.target.value}))} className="input-field text-sm" placeholder="45000" />
+                  <input required type="number" min={0} value={form.price}
+                    onChange={e => setForm(f => ({...f, price: e.target.value}))}
+                    className="text-sm input-field" placeholder="45000" />
                 </div>
                 <div>
                   <label className="label-xs">Original Price (₦)</label>
-                  <input type="number" min={0} value={form.originalPrice} onChange={e => setForm(f => ({...f, originalPrice: e.target.value}))} className="input-field text-sm" placeholder="Leave blank if no discount" />
+                  <input type="number" min={0} value={form.originalPrice}
+                    onChange={e => setForm(f => ({...f, originalPrice: e.target.value}))}
+                    className="text-sm input-field" placeholder="Leave blank if no discount" />
                 </div>
+
+                {/* stock + badge */}
                 <div>
                   <label className="label-xs">Stock</label>
-                  <input type="number" min={0} value={form.stock} onChange={e => setForm(f => ({...f, stock: e.target.value}))} className="input-field text-sm" />
+                  <input type="number" min={0} value={form.stock}
+                    onChange={e => setForm(f => ({...f, stock: e.target.value}))}
+                    className="text-sm input-field" />
                 </div>
                 <div>
                   <label className="label-xs">Badge</label>
-                  <select value={form.badge} onChange={e => setForm(f => ({...f, badge: e.target.value}))} className="input-field text-sm">
-                    {['', 'New', 'Bestseller', 'Sale', 'Luxury', 'Bridal', 'Premium'].map(b => <option key={b} value={b}>{b || '— None —'}</option>)}
+                  <select value={form.badge}
+                    onChange={e => setForm(f => ({...f, badge: e.target.value}))}
+                    className="text-sm input-field">
+                    {['', 'New', 'Bestseller', 'Sale', 'Luxury', 'Bridal', 'Premium'].map(b => (
+                      <option key={b} value={b}>{b || '— None —'}</option>
+                    ))}
                   </select>
                 </div>
+
+                {/* colors + sizes */}
                 <div className="sm:col-span-2">
                   <label className="label-xs">Colors (comma-separated)</label>
-                  <input value={form.colors} onChange={e => setForm(f => ({...f, colors: e.target.value}))} className="input-field text-sm" placeholder="Blush, Ivory, Champagne" />
+                  <input value={form.colors}
+                    onChange={e => setForm(f => ({...f, colors: e.target.value}))}
+                    className="text-sm input-field" placeholder="Blush, Ivory, Champagne" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="label-xs">Sizes (comma-separated)</label>
-                  <input value={form.sizes} onChange={e => setForm(f => ({...f, sizes: e.target.value}))} className="input-field text-sm" placeholder="XS, S, M, L, XL" />
+                  <input value={form.sizes}
+                    onChange={e => setForm(f => ({...f, sizes: e.target.value}))}
+                    className="text-sm input-field" placeholder="XS, S, M, L, XL" />
                 </div>
+
+                {/* description */}
                 <div className="sm:col-span-2">
                   <label className="label-xs">Description</label>
-                  <textarea rows={3} value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} className="input-field text-sm resize-none" />
+                  <textarea rows={3} value={form.description}
+                    onChange={e => setForm(f => ({...f, description: e.target.value}))}
+                    className="text-sm resize-none input-field" />
                 </div>
-                <div className="sm:col-span-2 flex items-center gap-2">
-                  <input type="checkbox" id="featured" checked={form.featured} onChange={e => setForm(f => ({...f, featured: e.target.checked}))} className="accent-charcoal-900" />
-                  <label htmlFor="featured" className="font-body text-xs text-charcoal-700">Featured on homepage</label>
+
+                {/* featured */}
+                <div className="flex items-center gap-2 sm:col-span-2">
+                  <input type="checkbox" id="featured" checked={form.featured}
+                    onChange={e => setForm(f => ({...f, featured: e.target.checked}))}
+                    className="accent-charcoal-900" />
+                  <label htmlFor="featured" className="text-xs font-body text-charcoal-700">Featured on homepage</label>
                 </div>
+
+                {/* ── image upload ── */}
+                <div className="sm:col-span-2">
+                  <label className="label-xs">Product Images (up to 6)</label>
+
+                  {/* drop zone / file picker */}
+                  <label className="mt-1 flex flex-col items-center justify-center gap-1.5 border border-dashed border-stone-300 py-5 cursor-pointer hover:border-charcoal-700 hover:bg-stone-50 transition-colors">
+                    <Upload size={18} className="text-stone-400" />
+                    <span className="text-xs font-body text-stone-400">Click to upload images</span>
+                    <span className="font-body text-[10px] text-stone-300">JPG, PNG, WEBP · max 6 photos</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={handleImagePick}
+                      disabled={imagePreviews.length >= 6}
+                    />
+                  </label>
+
+                  {imagePreviews.length > 0 && (
+                    <p className="font-body text-[10px] text-stone-400 mt-1.5">
+                      {imagePreviews.length}/6 photos · hover an image to remove it · first image is the main photo
+                    </p>
+                  )}
+                </div>
+
               </div>
+
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="btn-primary flex-1 py-2.5">{editTarget ? 'Save Changes' : 'Add Product'}</button>
-                <button type="button" onClick={() => setShowForm(false)} className="btn-outline flex-1 py-2.5">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary flex-1 py-2.5 disabled:opacity-60">
+                  {saving ? 'Saving…' : editTarget ? 'Save Changes' : 'Add Product'}
+                </button>
+                <button type="button" onClick={() => setShowForm(false)} className="btn-outline flex-1 py-2.5">
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -408,14 +550,14 @@ function AdminProducts() {
 
       {/* ── delete confirm ── */}
       {confirm && (
-        <div className="fixed inset-0 z-50 bg-charcoal-900/60 flex items-center justify-center p-4">
-          <div className="bg-white p-6 max-w-sm w-full text-center">
-            <Trash2 size={24} className="text-blush-500 mx-auto mb-3" />
-            <h3 className="font-body text-sm font-semibold text-charcoal-800 mb-2">Delete this product?</h3>
-            <p className="font-body text-xs text-stone-400 mb-5">This action cannot be undone.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-900/60">
+          <div className="w-full max-w-sm p-6 text-center bg-white">
+            <Trash2 size={24} className="mx-auto mb-3 text-blush-500" />
+            <h3 className="mb-2 text-sm font-semibold font-body text-charcoal-800">Delete this product?</h3>
+            <p className="mb-5 text-xs font-body text-stone-400">This action cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => { deleteProduct(confirm); setConfirm(null); }} className="btn-blush flex-1 py-2">Delete</button>
-              <button onClick={() => setConfirm(null)} className="btn-outline flex-1 py-2">Cancel</button>
+              <button onClick={() => { deleteProduct(confirm); setConfirm(null); }} className="flex-1 py-2 btn-blush">Delete</button>
+              <button onClick={() => setConfirm(null)} className="flex-1 py-2 btn-outline">Cancel</button>
             </div>
           </div>
         </div>
@@ -427,9 +569,9 @@ function AdminProducts() {
 // ── orders panel ──────────────────────────────────────────────────────────────
 function AdminOrders() {
   const { orders, changeOrderStatus, deleteOrder, refreshOrders, loading } = useAdmin();
-  const [search,  setSearch]  = useState('');
-  const [filter,  setFilter]  = useState('all');
-  const [detail,  setDetail]  = useState(null);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [detail, setDetail] = useState(null);
 
   const filtered = orders.filter(o => {
     const matchFilter = filter === 'all' || o.status === filter;
@@ -439,21 +581,21 @@ function AdminOrders() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="font-display text-3xl text-charcoal-800 font-light">Orders</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-3xl font-light font-display text-charcoal-800">Orders</h1>
         <button onClick={refreshOrders}
-          className="flex items-center gap-2 font-body text-xs text-stone-500 hover:text-charcoal-800 transition-colors">
+          className="flex items-center gap-2 text-xs transition-colors font-body text-stone-500 hover:text-charcoal-800">
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <Search size={14} className="absolute -translate-y-1/2 left-3 top-1/2 text-stone-400" />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or ID…" className="input-field pl-9 text-sm" />
+            placeholder="Search by name or ID…" className="text-sm input-field pl-9" />
         </div>
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex flex-wrap gap-1">
           {['all','pending','processing','shipped','delivered','cancelled'].map(s => (
             <button key={s} onClick={() => setFilter(s)}
               className={`font-body text-[10px] tracking-wider uppercase px-3 py-1.5 border transition-colors ${
@@ -465,9 +607,9 @@ function AdminOrders() {
         </div>
       </div>
 
-      <div className="bg-white border border-stone-200 overflow-x-auto">
+      <div className="overflow-x-auto bg-white border border-stone-200">
         <table className="w-full min-w-[720px]">
-          <thead className="bg-stone-50 border-b border-stone-200">
+          <thead className="border-b bg-stone-50 border-stone-200">
             <tr className="text-left font-body text-[10px] tracking-[0.15em] uppercase text-stone-400">
               <th className="px-5 py-3">Order</th>
               <th className="px-5 py-3">Customer</th>
@@ -480,36 +622,34 @@ function AdminOrders() {
           </thead>
           <tbody>
             {filtered.map(o => (
-              <tr key={o.id} className="border-t border-stone-100 hover:bg-stone-50 transition-colors">
-                <td className="px-5 py-3 font-body text-xs font-medium text-charcoal-700">NB-{o.id.slice(-6)}</td>
+              <tr key={o.id} className="transition-colors border-t border-stone-100 hover:bg-stone-50">
+                <td className="px-5 py-3 text-xs font-medium font-body text-charcoal-700">NB-{o.id.slice(-6)}</td>
                 <td className="px-5 py-3">
-                  <p className="font-body text-xs text-charcoal-800">{o.customerName}</p>
+                  <p className="text-xs font-body text-charcoal-800">{o.customerName}</p>
                   <p className="font-body text-[10px] text-stone-400">{o.email}</p>
                 </td>
-                <td className="px-5 py-3 font-body text-xs text-charcoal-700">{(o.items || []).length} item{(o.items || []).length !== 1 ? 's' : ''}</td>
-                <td className="px-5 py-3 font-body text-xs font-semibold text-charcoal-800">₦{(o.total || 0).toLocaleString('en-NG')}</td>
-                <td className="px-5 py-3 font-body text-xs text-charcoal-700 capitalize">{o.paymentMethod || '—'}</td>
+                <td className="px-5 py-3 text-xs font-body text-charcoal-700">{(o.items || []).length} item{(o.items || []).length !== 1 ? 's' : ''}</td>
+                <td className="px-5 py-3 text-xs font-semibold font-body text-charcoal-800">₦{(o.total || 0).toLocaleString('en-NG')}</td>
+                <td className="px-5 py-3 text-xs capitalize font-body text-charcoal-700">{o.paymentMethod || '—'}</td>
                 <td className="px-5 py-3">
-                  <div className="relative">
-                    <select value={o.status}
-                      onChange={e => changeOrderStatus(o.id, e.target.value)}
-                      className="appearance-none font-body text-[10px] tracking-wider uppercase pl-2 pr-6 py-1 border cursor-pointer focus:outline-none"
-                      style={{ backgroundImage: 'none' }}
-                    >
-                      {['pending','processing','shipped','delivered','cancelled'].map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <select value={o.status}
+                    onChange={e => changeOrderStatus(o.id, e.target.value)}
+                    className="appearance-none font-body text-[10px] tracking-wider uppercase pl-2 pr-6 py-1 border cursor-pointer focus:outline-none"
+                    style={{ backgroundImage: 'none' }}
+                  >
+                    {['pending','processing','shipped','delivered','cancelled'].map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </td>
                 <td className="px-5 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <button onClick={() => setDetail(o)}
-                      className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-charcoal-800 transition-colors">
+                      className="flex items-center justify-center transition-colors w-7 h-7 text-stone-400 hover:text-charcoal-800">
                       <Eye size={13} />
                     </button>
                     <button onClick={() => deleteOrder(o.id)}
-                      className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-blush-500 transition-colors">
+                      className="flex items-center justify-center transition-colors w-7 h-7 text-stone-400 hover:text-blush-500">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -517,7 +657,7 @@ function AdminOrders() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-12 font-body text-xs text-stone-400">No orders found.</td></tr>
+              <tr><td colSpan={7} className="py-12 text-xs text-center font-body text-stone-400">No orders found.</td></tr>
             )}
           </tbody>
         </table>
@@ -525,17 +665,17 @@ function AdminOrders() {
 
       {/* order detail modal */}
       {detail && (
-        <div className="fixed inset-0 z-50 bg-charcoal-900/60 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-lg my-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-charcoal-900/60">
+          <div className="w-full max-w-lg p-6 my-4 bg-white">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-display text-xl text-charcoal-800 font-light">Order NB-{detail.id.slice(-6)}</h3>
+              <h3 className="text-xl font-light font-display text-charcoal-800">Order NB-{detail.id.slice(-6)}</h3>
               <button onClick={() => setDetail(null)}><X size={18} className="text-stone-400" /></button>
             </div>
-            <div className="space-y-4 font-body text-sm">
+            <div className="space-y-4 text-sm font-body">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-0.5">Customer</p>
-                  <p className="text-charcoal-800 font-medium">{detail.customerName}</p>
+                  <p className="font-medium text-charcoal-800">{detail.customerName}</p>
                 </div>
                 <div>
                   <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-0.5">Email</p>
@@ -547,14 +687,14 @@ function AdminOrders() {
                 </div>
                 <div>
                   <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-0.5">Payment</p>
-                  <p className="text-charcoal-700 capitalize">{detail.paymentMethod || '—'}</p>
+                  <p className="capitalize text-charcoal-700">{detail.paymentMethod || '—'}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-0.5">Delivery Address</p>
                   <p className="text-charcoal-700">{detail.address}, {detail.city}, {detail.state}</p>
                 </div>
               </div>
-              <div className="border-t border-stone-200 pt-3">
+              <div className="pt-3 border-t border-stone-200">
                 <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-2">Items</p>
                 {(detail.items || []).map((item, i) => (
                   <div key={i} className="flex justify-between text-xs text-charcoal-700 py-1.5 border-b border-stone-50">
@@ -563,12 +703,12 @@ function AdminOrders() {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between text-sm font-semibold text-charcoal-800 pt-1">
+              <div className="flex justify-between pt-1 text-sm font-semibold text-charcoal-800">
                 <span>Total</span>
                 <span className="text-blush-500">₦{(detail.total || 0).toLocaleString('en-NG')}</span>
               </div>
               {detail.notes && (
-                <div className="bg-stone-50 p-3">
+                <div className="p-3 bg-stone-50">
                   <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-1">Notes</p>
                   <p className="text-xs text-charcoal-700">{detail.notes}</p>
                 </div>
@@ -604,22 +744,22 @@ function AdminCustomers() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="font-display text-3xl text-charcoal-800 font-light">Customers</h1>
+        <h1 className="text-3xl font-light font-display text-charcoal-800">Customers</h1>
         <button onClick={refreshUsers}
-          className="flex items-center gap-2 font-body text-xs text-stone-500 hover:text-charcoal-800 transition-colors">
+          className="flex items-center gap-2 text-xs transition-colors font-body text-stone-500 hover:text-charcoal-800">
           <RefreshCw size={13} /> Refresh
         </button>
       </div>
 
       <div className="relative max-w-sm">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+        <Search size={14} className="absolute -translate-y-1/2 left-3 top-1/2 text-stone-400" />
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search customers…" className="input-field pl-9 text-sm" />
+          placeholder="Search customers…" className="text-sm input-field pl-9" />
       </div>
 
-      <div className="bg-white border border-stone-200 overflow-x-auto">
+      <div className="overflow-x-auto bg-white border border-stone-200">
         <table className="w-full min-w-[540px]">
-          <thead className="bg-stone-50 border-b border-stone-200">
+          <thead className="border-b bg-stone-50 border-stone-200">
             <tr className="text-left font-body text-[10px] tracking-[0.15em] uppercase text-stone-400">
               <th className="px-5 py-3">Name</th>
               <th className="px-5 py-3">Email</th>
@@ -629,10 +769,10 @@ function AdminCustomers() {
           </thead>
           <tbody>
             {filtered.map(u => (
-              <tr key={u.id} className="border-t border-stone-100 hover:bg-stone-50 transition-colors">
-                <td className="px-5 py-3 font-body text-xs font-medium text-charcoal-800">{u.name || '—'}</td>
-                <td className="px-5 py-3 font-body text-xs text-charcoal-700">{u.email}</td>
-                <td className="px-5 py-3 font-body text-xs text-stone-400">{u.created ? new Date(u.created).toLocaleDateString('en-NG') : '—'}</td>
+              <tr key={u.id} className="transition-colors border-t border-stone-100 hover:bg-stone-50">
+                <td className="px-5 py-3 text-xs font-medium font-body text-charcoal-800">{u.name || '—'}</td>
+                <td className="px-5 py-3 text-xs font-body text-charcoal-700">{u.email}</td>
+                <td className="px-5 py-3 text-xs font-body text-stone-400">{u.created ? new Date(u.created).toLocaleDateString('en-NG') : '—'}</td>
                 <td className="px-5 py-3">
                   {u.verified
                     ? <span className="text-green-500"><CheckCircle size={13} /></span>
@@ -641,7 +781,7 @@ function AdminCustomers() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={4} className="text-center py-10 font-body text-xs text-stone-400">No customers found.</td></tr>
+              <tr><td colSpan={4} className="py-10 text-xs text-center font-body text-stone-400">No customers found.</td></tr>
             )}
           </tbody>
         </table>
@@ -658,7 +798,7 @@ export default function AdminDashboard() {
   if (!isAdminLoggedIn) return <AdminLogin />;
 
   return (
-    <div className="min-h-screen bg-stone-50 flex">
+    <div className="flex min-h-screen bg-stone-50">
       {/* desktop sidebar */}
       <div className="hidden lg:block">
         <AdminSidebar />
@@ -666,9 +806,9 @@ export default function AdminDashboard() {
 
       {/* mobile sidebar */}
       {mobileSidebar && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="absolute inset-0 bg-charcoal-900/50" onClick={() => setMobileSidebar(false)} />
-          <div className="relative w-60 h-full">
+          <div className="relative h-full w-60">
             <AdminSidebar mobile onClose={() => setMobileSidebar(false)} />
           </div>
         </div>
@@ -676,20 +816,19 @@ export default function AdminDashboard() {
 
       {/* main content */}
       <main className="flex-1 min-w-0">
-        {/* topbar */}
-        <header className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+        <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-white border-b border-stone-200">
           <button onClick={() => setMobileSidebar(true)} className="lg:hidden">
             <Menu size={20} className="text-charcoal-800" />
           </button>
           <div className="hidden lg:block" />
-          <p className="font-body text-sm text-stone-400">
+          <p className="text-sm font-body text-stone-400">
             {new Date().toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </header>
 
-        <div className="p-6 max-w-6xl mx-auto">
+        <div className="max-w-6xl p-6 mx-auto">
           <Routes>
-            <Route index              element={<DashboardHome />} />
+            <Route index             element={<DashboardHome />} />
             <Route path="products"   element={<AdminProducts />} />
             <Route path="orders"     element={<AdminOrders />} />
             <Route path="customers"  element={<AdminCustomers />} />
@@ -697,7 +836,6 @@ export default function AdminDashboard() {
         </div>
       </main>
 
-      {/* utility class required by admin form labels */}
       <style>{`.label-xs { display:block; font-family: 'DM Sans', sans-serif; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:#9c9080; margin-bottom:4px; }`}</style>
     </div>
   );

@@ -5,9 +5,9 @@ import { useCart }  from '../context/CartContext';
 import { useAuth }  from '../context/AuthContext';
 
 const navLinks = [
-  { label: 'Women', href: '/products?gender=women', sub: ['Boubous', 'Gowns', 'Ankara', 'Perfumes'] },
+  { label: 'Women', href: '/products?gender=women', sub: ['Boubous', 'Gowns', 'Ankara'] },
   { label: 'Men',   href: '/products?gender=men',   sub: ['Agbada', 'Kaftan', 'Babariga', 'Senator'] },
-  { label: 'Sale',  href: '/products?badge=Sale',   isSale: true },
+  { label: 'Fragrances', href: '/products?category=Perfumes', sub: ['Perfumes'] },
 ];
 
 export default function Navbar() {
@@ -29,10 +29,8 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // close mobile on route change
   useEffect(() => { setMobileOpen(false); setSearchOpen(false); }, [location.pathname]);
 
-  // focus search input when opened
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchRef.current?.focus(), 50);
   }, [searchOpen]);
@@ -40,7 +38,7 @@ export default function Navbar() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQ.trim()) {
-      navigate(`/products?q=${encodeURIComponent(searchQ.trim())}`);
+      navigate('/products?q=' + encodeURIComponent(searchQ.trim()));
       setSearchOpen(false);
       setSearchQ('');
     }
@@ -53,28 +51,24 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ── top announcement bar ── */}
-      <div className="bg-charcoal-900 text-stone-200 text-center py-2 text-xs font-body tracking-wider">
+      <div className="py-2 text-xs tracking-wider text-center bg-charcoal-900 text-stone-200 font-body">
         Free shipping on orders over ₦30,000 &nbsp;·&nbsp; <Link to="/faq" className="underline underline-offset-2">Size guide</Link>
       </div>
 
-      {/* ── main nav ── */}
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${
+      <header className={'sticky top-0 z-50 transition-all duration-300 ' + (
         isTransparent
           ? 'bg-transparent border-b border-transparent'
           : scrolled
             ? 'bg-white/95 backdrop-blur-md border-b border-stone-200 shadow-soft'
             : 'bg-white border-b border-stone-200'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      )}>
+        <div className="flex items-center justify-between h-16 gap-4 px-4 mx-auto max-w-7xl sm:px-6">
 
-          {/* logo */}
           <Link to="/" className="shrink-0">
-            <span className="font-script text-3xl text-charcoal-800 leading-none">Nura Bahar</span>
+            <span className="text-3xl leading-none font-script text-charcoal-800">Nura Bahar</span>
           </Link>
 
-          {/* desktop nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="items-center hidden gap-1 lg:flex">
             {navLinks.map(link => (
               <div key={link.label}
                 className="relative"
@@ -83,19 +77,14 @@ export default function Navbar() {
               >
                 <Link
                   to={link.href}
-                  className={`flex items-center gap-1 px-4 py-2 font-body text-sm font-medium transition-colors duration-150 ${
-                    link.isSale
-                      ? 'text-blush-500 hover:text-blush-600'
-                      : 'text-charcoal-800 hover:text-blush-500'
-                  }`}
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium transition-colors duration-150 font-body text-charcoal-800 hover:text-blush-500"
                 >
                   {link.label}
                   {link.sub && <ChevronDown size={13} className="opacity-60 mt-0.5" />}
                 </Link>
 
-                {/* dropdown */}
                 {link.sub && activeDropdown === link.label && (
-                  <div className="absolute top-full left-0 pt-1 z-50"
+                  <div className="absolute left-0 z-50 pt-1 top-full"
                     onMouseEnter={() => openDrop(link.label)}
                     onMouseLeave={() => closeDrop()}
                   >
@@ -103,13 +92,13 @@ export default function Navbar() {
                       {link.sub.map(cat => (
                         <Link
                           key={cat}
-                          to={`/products?category=${cat}`}
+                          to={'/products?category=' + cat}
                           className="block px-5 py-2.5 font-body text-sm text-charcoal-700 hover:bg-stone-50 hover:text-charcoal-900 transition-colors"
                         >
                           {cat}
                         </Link>
                       ))}
-                      <div className="border-t border-stone-100 mt-1 pt-1">
+                      <div className="pt-1 mt-1 border-t border-stone-100">
                         <Link
                           to={link.href}
                           className="block px-5 py-2.5 font-body text-xs text-blush-500 hover:bg-stone-50 tracking-wider uppercase"
@@ -123,34 +112,31 @@ export default function Navbar() {
               </div>
             ))}
             <Link to="/faq"
-              className="px-4 py-2 font-body text-sm font-medium text-charcoal-800 hover:text-blush-500 transition-colors">
+              className="px-4 py-2 text-sm font-medium transition-colors font-body text-charcoal-800 hover:text-blush-500">
               FAQ
             </Link>
           </nav>
 
-          {/* right icons */}
           <div className="flex items-center gap-1">
-            {/* search */}
             <button
               onClick={() => setSearchOpen(s => !s)}
-              className="w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors"
+              className="flex items-center justify-center transition-colors w-9 h-9 text-charcoal-800 hover:text-blush-500"
               aria-label="Search"
             >
               <Search size={18} />
             </button>
 
-            {/* account */}
             {user ? (
               <div className="relative group">
-                <button className="w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors">
+                <button className="flex items-center justify-center transition-colors w-9 h-9 text-charcoal-800 hover:text-blush-500">
                   <User size={18} />
                 </button>
-                <div className="absolute top-full right-0 pt-1 hidden group-hover:block z-50">
+                <div className="absolute right-0 z-50 hidden pt-1 top-full group-hover:block">
                   <div className="bg-white border border-stone-200 shadow-card min-w-[160px] py-2">
-                    <p className="px-4 py-2 font-body text-xs text-charcoal-700/60 border-b border-stone-100 mb-1">{user.email}</p>
+                    <p className="px-4 py-2 mb-1 text-xs border-b font-body text-charcoal-700/60 border-stone-100">{user.email}</p>
                     <button
                       onClick={logout}
-                      className="block w-full text-left px-4 py-2 font-body text-sm text-charcoal-700 hover:bg-stone-50 hover:text-blush-500 transition-colors"
+                      className="block w-full px-4 py-2 text-sm text-left transition-colors font-body text-charcoal-700 hover:bg-stone-50 hover:text-blush-500"
                     >
                       Sign out
                     </button>
@@ -158,18 +144,16 @@ export default function Navbar() {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className="w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors" aria-label="Login">
+              <Link to="/login" className="flex items-center justify-center transition-colors w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Login">
                 <User size={18} />
               </Link>
             )}
 
-            {/* wishlist placeholder */}
-            <button className="hidden sm:flex w-9 h-9 items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors" aria-label="Wishlist">
+            <button className="items-center justify-center hidden transition-colors sm:flex w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Wishlist">
               <Heart size={18} />
             </button>
 
-            {/* cart */}
-            <Link to="/cart" className="relative w-9 h-9 flex items-center justify-center text-charcoal-800 hover:text-blush-500 transition-colors" aria-label="Cart">
+            <Link to="/cart" className="relative flex items-center justify-center transition-colors w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Cart">
               <ShoppingBag size={18} />
               {cartCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] bg-blush-500 text-white text-[10px] font-body font-semibold flex items-center justify-center rounded-full px-0.5">
@@ -178,10 +162,9 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* mobile hamburger */}
             <button
               onClick={() => setMobileOpen(o => !o)}
-              className="lg:hidden w-9 h-9 flex items-center justify-center text-charcoal-800"
+              className="flex items-center justify-center lg:hidden w-9 h-9 text-charcoal-800"
               aria-label="Menu"
             >
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -189,10 +172,9 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* ── search bar ── */}
         {searchOpen && (
-          <div className="border-t border-stone-200 bg-white animate-fade-in">
-            <form onSubmit={handleSearch} className="max-w-2xl mx-auto px-6 py-4 flex gap-3">
+          <div className="bg-white border-t border-stone-200 animate-fade-in">
+            <form onSubmit={handleSearch} className="flex max-w-2xl gap-3 px-6 py-4 mx-auto">
               <input
                 ref={searchRef}
                 type="text"
@@ -212,30 +194,27 @@ export default function Navbar() {
         )}
       </header>
 
-      {/* ── mobile drawer ── */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
-          {/* backdrop */}
+        <div className="fixed inset-0 z-40 flex lg:hidden">
           <div className="absolute inset-0 bg-charcoal-900/40" onClick={() => setMobileOpen(false)} />
-          {/* drawer */}
-          <div className="relative ml-auto w-72 h-full bg-white flex flex-col shadow-lift animate-slide-in">
+          <div className="relative flex flex-col h-full ml-auto bg-white w-72 shadow-lift animate-slide-in">
             <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200">
-              <span className="font-script text-2xl text-charcoal-800">Nura Bahar</span>
+              <span className="text-2xl font-script text-charcoal-800">Nura Bahar</span>
               <button onClick={() => setMobileOpen(false)}><X size={20} className="text-charcoal-700" /></button>
             </div>
-            <nav className="flex-1 overflow-y-auto py-4">
+            <nav className="flex-1 py-4 overflow-y-auto">
               {navLinks.map(link => (
                 <div key={link.label}>
                   <Link
                     to={link.href}
-                    className={`flex items-center justify-between px-6 py-3.5 font-body text-sm font-medium border-b border-stone-100 ${link.isSale ? 'text-blush-500' : 'text-charcoal-800'}`}
+                    className="flex items-center justify-between px-6 py-3.5 font-body text-sm font-medium border-b border-stone-100 text-charcoal-800"
                   >
                     {link.label}
                   </Link>
                   {link.sub && link.sub.map(cat => (
                     <Link
                       key={cat}
-                      to={`/products?category=${cat}`}
+                      to={'/products?category=' + cat}
                       className="block pl-10 pr-6 py-2.5 font-body text-sm text-charcoal-700/70 hover:text-charcoal-900 border-b border-stone-50"
                     >
                       {cat}
@@ -245,14 +224,14 @@ export default function Navbar() {
               ))}
               <Link to="/faq" className="block px-6 py-3.5 font-body text-sm font-medium text-charcoal-800 border-b border-stone-100">FAQ</Link>
             </nav>
-            <div className="px-6 py-5 border-t border-stone-200 flex flex-col gap-3">
+            <div className="flex flex-col gap-3 px-6 py-5 border-t border-stone-200">
               {user ? (
                 <>
-                  <p className="font-body text-xs text-charcoal-700/60">{user.email}</p>
-                  <button onClick={logout} className="btn-outline w-full">Sign out</button>
+                  <p className="text-xs font-body text-charcoal-700/60">{user.email}</p>
+                  <button onClick={logout} className="w-full btn-outline">Sign out</button>
                 </>
               ) : (
-                <Link to="/login" className="btn-primary w-full text-center">Login / Register</Link>
+                <Link to="/login" className="w-full text-center btn-primary">Login / Register</Link>
               )}
             </div>
           </div>
