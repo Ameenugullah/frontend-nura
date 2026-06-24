@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ShoppingBag, Heart, Share2, Star, Truck, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
-import { useCart }  from '../context/CartContext';
+import { useCart }      from '../context/CartContext';
+import { useWishlist }  from '../context/WishlistContext';
 import ProductCard  from '../components/ProductCard';
 
 const FALLBACK = '/images/fallback.svg';
@@ -11,6 +12,7 @@ export default function ProductDetail() {
   const { id }          = useParams();
   const { allProducts } = useAdmin();
   const { addToCart }   = useCart();
+  const { toggle: toggleWishlist, isWishlisted } = useWishlist();
   const navigate        = useNavigate();
 
   const product = allProducts.find(p => String(p.id) === String(id));
@@ -19,7 +21,7 @@ export default function ProductDetail() {
   const [size,     setSize]     = useState('');
   const [color,    setColor]    = useState('');
   const [qty,      setQty]      = useState(1);
-  const [liked,    setLiked]    = useState(false);
+  // liked state is now derived from WishlistContext
   const [added,    setAdded]    = useState(false);
   const [error,    setError]    = useState('');
 
@@ -32,9 +34,9 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="font-body text-stone-400 mb-4">Product not found.</p>
+          <p className="mb-4 font-body text-stone-400">Product not found.</p>
           <Link to="/products" className="btn-primary">Back to Products</Link>
         </div>
       </div>
@@ -57,28 +59,28 @@ export default function ProductDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 pt-4">
-      <div className="max-w-7xl mx-auto px-6 pb-20">
+    <div className="min-h-screen pt-4 bg-stone-50">
+      <div className="px-6 pb-20 mx-auto max-w-7xl">
         {/* breadcrumb */}
-        <div className="flex items-center gap-2 font-body text-xs text-stone-400 mb-6">
-          <Link to="/" className="hover:text-charcoal-800 transition-colors">Home</Link>
+        <div className="flex items-center gap-2 mb-6 text-xs font-body text-stone-400">
+          <Link to="/" className="transition-colors hover:text-charcoal-800">Home</Link>
           <span>/</span>
-          <Link to="/products" className="hover:text-charcoal-800 transition-colors">Products</Link>
+          <Link to="/products" className="transition-colors hover:text-charcoal-800">Products</Link>
           <span>/</span>
           <span className="text-charcoal-800">{product.name}</span>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
+        <div className="grid items-start gap-12 lg:grid-cols-2">
           {/* ── image gallery ── */}
           <div className="flex gap-4">
             {/* thumbnails */}
             {images.length > 1 && (
-              <div className="flex flex-col gap-2 w-16 shrink-0">
+              <div className="flex flex-col w-16 gap-2 shrink-0">
                 {images.map((img, i) => (
                   <button key={i}
                     onClick={() => setImgIdx(i)}
                     className={`aspect-square overflow-hidden border-2 transition-colors ${imgIdx === i ? 'border-charcoal-900' : 'border-transparent'}`}>
-                    <img src={img} alt={`View ${i+1}`} className="w-full h-full object-cover"
+                    <img src={img} alt={`View ${i+1}`} className="object-cover w-full h-full"
                       onError={e => { e.target.onerror = null; e.target.src = FALLBACK; }} />
                   </button>
                 ))}
@@ -89,24 +91,24 @@ export default function ProductDetail() {
               <img
                 src={images[imgIdx]}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="object-cover w-full h-full"
                 onError={e => { e.target.onerror = null; e.target.src = FALLBACK; }}
               />
               {product.badge && (
                 <span className={`badge bg-charcoal-900 text-white`}>{product.badge}</span>
               )}
               {discount && (
-                <span className="badge left-auto right-3 bg-blush-500 text-white">-{discount}%</span>
+                <span className="left-auto text-white badge right-3 bg-blush-500">-{discount}%</span>
               )}
               {/* prev/next arrows */}
               {images.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 flex items-center justify-center hover:bg-white transition-colors">
+                    className="absolute flex items-center justify-center w-8 h-8 transition-colors -translate-y-1/2 left-2 top-1/2 bg-white/80 hover:bg-white">
                     <ChevronLeft size={16} />
                   </button>
                   <button onClick={() => setImgIdx(i => (i + 1) % images.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 flex items-center justify-center hover:bg-white transition-colors">
+                    className="absolute flex items-center justify-center w-8 h-8 transition-colors -translate-y-1/2 right-2 top-1/2 bg-white/80 hover:bg-white">
                     <ChevronRight size={16} />
                   </button>
                 </>
@@ -116,8 +118,8 @@ export default function ProductDetail() {
 
           {/* ── product info ── */}
           <div className="lg:sticky lg:top-28">
-            <p className="tag-dark mb-2">{product.category}</p>
-            <h1 className="font-display text-3xl sm:text-4xl text-charcoal-800 font-light leading-tight mb-3">{product.name}</h1>
+            <p className="mb-2 tag-dark">{product.category}</p>
+            <h1 className="mb-3 text-3xl font-light leading-tight font-display sm:text-4xl text-charcoal-800">{product.name}</h1>
 
             {/* rating */}
             <div className="flex items-center gap-2 mb-4">
@@ -126,31 +128,31 @@ export default function ProductDetail() {
                   <Star key={s} size={14} fill={s <= Math.round(product.rating) ? '#f59e0b' : 'none'} stroke={s <= Math.round(product.rating) ? '#f59e0b' : '#d1d5db'} />
                 ))}
               </div>
-              <span className="font-body text-xs text-stone-400">{product.rating} · {product.reviews || 0} reviews</span>
+              <span className="text-xs font-body text-stone-400">{product.rating} · {product.reviews || 0} reviews</span>
             </div>
 
             {/* price */}
             <div className="flex items-baseline gap-3 mb-6">
-              <span className="font-display text-3xl text-charcoal-900 font-light">
+              <span className="text-3xl font-light font-display text-charcoal-900">
                 ₦{product.price.toLocaleString('en-NG')}
               </span>
               {product.originalPrice && (
-                <span className="font-body text-base text-stone-400 line-through">
+                <span className="text-base line-through font-body text-stone-400">
                   ₦{product.originalPrice.toLocaleString('en-NG')}
                 </span>
               )}
               {discount && (
-                <span className="font-body text-sm text-blush-500 font-medium">{discount}% off</span>
+                <span className="text-sm font-medium font-body text-blush-500">{discount}% off</span>
               )}
             </div>
 
-            <div className="w-10 h-px bg-stone-200 mb-6" />
+            <div className="w-10 h-px mb-6 bg-stone-200" />
 
             {/* colors */}
             {product.colors && product.colors[0] !== 'One Size' && (
               <div className="mb-5">
                 <p className="font-body text-xs tracking-wider uppercase text-stone-500 mb-2.5">
-                  Color: <span className="text-charcoal-800 normal-case tracking-normal">{color}</span>
+                  Color: <span className="tracking-normal normal-case text-charcoal-800">{color}</span>
                 </p>
                 <div className="flex gap-2">
                   {product.colors.map(c => (
@@ -169,10 +171,10 @@ export default function ProductDetail() {
             {product.sizes && product.sizes[0] !== 'One Size' && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2.5">
-                  <p className="font-body text-xs tracking-wider uppercase text-stone-500">Size</p>
-                  <Link to="/faq" className="font-body text-xs text-blush-500 hover:text-blush-600 underline">Size Guide</Link>
+                  <p className="text-xs tracking-wider uppercase font-body text-stone-500">Size</p>
+                  <Link to="/faq" className="text-xs underline font-body text-blush-500 hover:text-blush-600">Size Guide</Link>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap gap-2">
                   {product.sizes.map(s => (
                     <button key={s}
                       onClick={() => { setSize(s); setError(''); }}
@@ -192,17 +194,17 @@ export default function ProductDetail() {
             <div className="flex items-center gap-4 mb-6">
               <div className="flex items-center border border-stone-200">
                 <button onClick={() => setQty(q => Math.max(1, q-1))}
-                  className="w-9 h-9 flex items-center justify-center text-charcoal-700 hover:bg-stone-50 transition-colors font-body">–</button>
-                <span className="w-10 text-center font-body text-sm">{qty}</span>
+                  className="flex items-center justify-center transition-colors w-9 h-9 text-charcoal-700 hover:bg-stone-50 font-body">–</button>
+                <span className="w-10 text-sm text-center font-body">{qty}</span>
                 <button onClick={() => setQty(q => Math.min(product.stock, q+1))}
-                  className="w-9 h-9 flex items-center justify-center text-charcoal-700 hover:bg-stone-50 transition-colors font-body">+</button>
+                  className="flex items-center justify-center transition-colors w-9 h-9 text-charcoal-700 hover:bg-stone-50 font-body">+</button>
               </div>
               <span className={`font-body text-xs ${lowStock ? 'text-blush-500' : inStock ? 'text-green-600' : 'text-red-500'}`}>
                 {!inStock ? 'Out of stock' : lowStock ? `Only ${product.stock} left` : 'In stock'}
               </span>
             </div>
 
-            {error && <p className="font-body text-xs text-blush-500 mb-3">{error}</p>}
+            {error && <p className="mb-3 text-xs font-body text-blush-500">{error}</p>}
 
             {/* CTA buttons */}
             <div className="flex gap-3 mb-6">
@@ -218,38 +220,38 @@ export default function ProductDetail() {
                 {added ? '✓ Added to Cart' : <><ShoppingBag size={16} /> Add to Cart</>}
               </button>
               <button
-                onClick={() => setLiked(l => !l)}
-                className="w-12 h-12 border border-stone-200 flex items-center justify-center hover:border-blush-500 transition-colors"
+                onClick={() => toggleWishlist(product)}
+                className="flex items-center justify-center w-12 h-12 transition-colors border border-stone-200 hover:border-blush-500"
               >
-                <Heart size={18} fill={liked ? '#d97070' : 'none'} stroke={liked ? '#d97070' : 'currentColor'} />
+                <Heart size={18} fill={isWishlisted(product.id) ? '#d97070' : 'none'} stroke={isWishlisted(product.id) ? '#d97070' : 'currentColor'} />
               </button>
             </div>
 
             <button
               onClick={() => { handleAddToCart(); navigate('/cart'); }}
               disabled={!inStock}
-              className="w-full py-3 font-body text-sm font-medium border border-charcoal-900 text-charcoal-900 hover:bg-charcoal-900 hover:text-white transition-all disabled:opacity-40 mb-8"
+              className="w-full py-3 mb-8 text-sm font-medium transition-all border font-body border-charcoal-900 text-charcoal-900 hover:bg-charcoal-900 hover:text-white disabled:opacity-40"
             >
               Buy Now
             </button>
 
             {/* perks */}
-            <div className="border-t border-stone-200 pt-5 space-y-3">
+            <div className="pt-5 space-y-3 border-t border-stone-200">
               {[
-                { icon: Truck,     text: 'Free delivery on orders over ₦30,000' },
+                { icon: Truck,     text: 'Free delivery on orders over ₦500,000' },
                 { icon: RotateCcw, text: 'Returns accepted within 7 days' },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">
                   <Icon size={16} className="text-stone-400 shrink-0" strokeWidth={1.5} />
-                  <span className="font-body text-xs text-stone-500">{text}</span>
+                  <span className="text-xs font-body text-stone-500">{text}</span>
                 </div>
               ))}
             </div>
 
             {/* description */}
             {product.description && (
-              <div className="border-t border-stone-200 mt-6 pt-5">
-                <p className="font-body text-sm text-charcoal-700/80 leading-relaxed">{product.description}</p>
+              <div className="pt-5 mt-6 border-t border-stone-200">
+                <p className="text-sm leading-relaxed font-body text-charcoal-700/80">{product.description}</p>
               </div>
             )}
           </div>
@@ -258,11 +260,11 @@ export default function ProductDetail() {
         {/* related products */}
         {related.length > 0 && (
           <section className="mt-20">
-            <div className="text-center mb-10">
-              <span className="tag-dark block mb-2">You may also like</span>
-              <h2 className="font-display text-3xl text-charcoal-800 font-light italic">Related Products</h2>
+            <div className="mb-10 text-center">
+              <span className="block mb-2 tag-dark">You may also like</span>
+              <h2 className="text-3xl italic font-light font-display text-charcoal-800">Related Products</h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
               {related.map(p => (
                 <ProductCard key={p.id} product={p} />
               ))}

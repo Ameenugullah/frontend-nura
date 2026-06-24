@@ -4,11 +4,14 @@
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; height: 100%; }
   body {
     @apply bg-stone-50 text-charcoal-800 font-body;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    height: 100%;
   }
+  #root { height: 100%; }
   /* Prevent iOS zoom on inputs */
   input, textarea, select { font-size: 16px; }
 }
@@ -53,12 +56,7 @@
 
   /* ── Inputs ── */
   .input-field {
-    @apply w-full border border-stone-200 bg-white
-           font-body text-sm text-charcoal-800
-           px-4 py-3
-           focus:outline-none focus:border-charcoal-700
-           placeholder-stone-400
-           transition-colors duration-200;
+    @apply w-full px-4 py-3 text-sm transition-colors duration-200 bg-white border border-stone-200 font-body text-charcoal-800 focus:outline-none focus:border-charcoal-700 placeholder-stone-400;
   }
 
   /* ── Tags / labels ── */
@@ -74,7 +72,7 @@
 
   /* ── Section heading ── */
   .section-heading {
-    @apply font-display text-3xl sm:text-4xl md:text-5xl text-charcoal-800 font-light;
+    @apply text-3xl font-light font-display sm:text-4xl md:text-5xl text-charcoal-800;
   }
 
   /* ── Hero overlays ── */
@@ -84,14 +82,13 @@
   .hero-overlay-dark {
     background: linear-gradient(135deg, rgba(15,24,41,0.75) 0%, rgba(15,24,41,0.3) 100%);
   }
-  /* Figma-style: centered overlay for full-bleed hero */
   .hero-overlay-center {
     background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 100%);
   }
 
   /* ── Glass card ── */
   .glass {
-    @apply bg-white/10 backdrop-blur-sm border border-white/20;
+    @apply border bg-white/10 backdrop-blur-sm border-white/20;
   }
 
   /* ── Scroll reveal ── */
@@ -131,7 +128,7 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Figma product card select-options overlay */
+/* Product card select-options hover overlay */
 .product-options-overlay {
   transition: opacity 0.25s ease, transform 0.25s ease;
   opacity: 0;

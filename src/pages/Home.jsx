@@ -2,22 +2,25 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Truck, RotateCcw, Lock, Star, Sparkles } from 'lucide-react';
 import { getProducts } from '../lib/api';
+import { matchesGender, isFragrance } from '../lib/categories';
 import ProductCard from '../components/ProductCard';
 import MensCollection from '../components/MensCollection';
+import FragrancesCollection from '../components/FragrancesCollection';
 import Ticker from '../components/Ticker';
+import InstagramGrid from '../components/InstagramGrid';
 
 const heroSlides = [
   {
-    image: '/images/teal-satin-boubou-2.jpg',
-    fallback: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1400&q=80',
+    image: '/images/IMG.png',
+    fallback: '/images/placeholder-product.svg',
     tag:     'New Collection — 2026',
     heading: 'MEGA\nCOLLECTION',
     sub:     'New Arrivals Summer 2026',
     cta:     'Shop Now',
   },
   {
-    image: '/images/coral-cape-dress-1.jpg',
-    fallback: 'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=1400&q=80',
+    image: '/images/IMG_1753.jpeg',
+    fallback: '/images/placeholder-product.svg',
     tag:     'Nura Bahar Nigeria',
     heading: 'WEAR YOUR\nHERITAGE',
     sub:     'From Kano to the world — with love.',
@@ -26,16 +29,16 @@ const heroSlides = [
 ];
 
 const perks = [
-  { icon: Truck,     label: 'Free Shipping & Returns',  sub: 'On orders over ₦30,000' },
+  { icon: Truck,     label: 'Free Shipping & Returns',  sub: 'On orders over ₦500,000' },
   { icon: Lock,      label: 'Money Back Guarantee',     sub: 'Within 7 days' },
   { icon: Star,      label: 'Online Support 24/7',      sub: 'We reply on WhatsApp' },
   { icon: RotateCcw, label: 'Secure Payment',           sub: 'Paystack & bank transfer' },
 ];
 
-const categoryBanners = [
-  { label: 'WOMEN', letter: 'W', image: '/images/luna-dress-1.jpg',    fallback: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80', href: '/products?gender=women' },
-  { label: 'MEN',   letter: 'M', image: '/images/agbada-1.jpg',        fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80', href: '/products?gender=men' },
-  { label: 'NEW',   letter: 'N', image: '/images/ankara-dress-1.jpg',  fallback: 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80', href: '/products?badge=New' },
+const categoryBannersMeta = [
+  { label: 'WOMEN',     letter: 'W', href: '/products?section=women',     sectionKey: 'women' },
+  { label: 'MEN',       letter: 'M', href: '/products?section=men',       sectionKey: 'men' },
+  { label: 'Fragrance', letter: 'F', href: '/products?section=fragrance', sectionKey: 'fragrance' },
 ];
 
 const testimonials = [
@@ -58,16 +61,32 @@ function useScrollReveal() {
   return ref;
 }
 
-// shared hook — fetches all products once
 function useAllProducts() {
   const [products, setProducts] = useState([]);
   useEffect(() => {
-    fetch('http://localhost:8090/api/collections/products/records')
-      .then(r => r.json())
-      .then(d => setProducts(d.items || []))
-      .catch(() => setProducts([]));
+    let mounted = true;
+    getProducts().then(items => {
+      if (!mounted) return;
+      setProducts(items || []);
+    }).catch(() => {
+      if (!mounted) return;
+      setProducts([]);
+    });
+    return () => { mounted = false; };
   }, []);
-  return products;
+
+  const bannerImages = {
+    women:     products.find(p => matchesGender(p, 'women'))?.images?.[0]  || null,
+    men:       products.find(p => matchesGender(p, 'men'))?.images?.[0]    || null,
+    fragrance: products.find(p => isFragrance(p))?.images?.[0]            || null,
+  };
+
+  const featuredImages = products
+    .filter(p => p.featured && p.images?.[0])
+    .slice(0, 2)
+    .map(p => p.images[0]);
+
+  return { products, bannerImages, featuredImages };
 }
 
 export default function Home() {
@@ -76,7 +95,7 @@ export default function Home() {
   const [atEnd,   setAtEnd]   = useState(false);
   const revealRef  = useScrollReveal();
   const scrollRef  = useRef(null);
-  const allProducts = useAllProducts();
+  const { products: allProducts, bannerImages, featuredImages } = useAllProducts();
   const slide = heroSlides[heroIdx];
 
   useEffect(() => {
@@ -109,7 +128,7 @@ export default function Home() {
   return (
     <div ref={revealRef}>
 
-      {/* ── HERO ── */}
+      {/* ── Hero ── */}
       <section className="relative h-screen min-h-[560px] max-h-[900px] overflow-hidden">
         <div className="absolute inset-0">
           <img src={slide.image} alt="Hero"
@@ -136,7 +155,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── PERKS BAR ── */}
+      {/* ── Perks bar ── */}
       <section className="py-5 bg-white border-y border-stone-200">
         <div className="px-6 mx-auto max-w-7xl">
           <div className="flex flex-col items-center justify-between gap-4 divide-y sm:flex-row sm:divide-y-0 sm:divide-x divide-stone-100">
@@ -153,31 +172,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CATEGORY BANNERS ── */}
+      {/* ── Category banners ── */}
       <section className="px-6 py-8 mx-auto max-w-7xl animate-on-scroll">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {categoryBanners.map((cat) => (
-            <Link key={cat.label} to={cat.href} className="relative overflow-hidden aspect-[3/4] group bg-stone-200">
-              <img src={cat.image} alt={cat.label}
-                className="object-cover w-full h-full product-card-image"
-                onError={e => { e.target.onerror = null; e.target.src = cat.fallback; }}
-                loading="lazy"
-              />
-              <span className="absolute inset-0 flex items-center justify-center font-display text-[10rem] font-bold text-white/10 select-none pointer-events-none">{cat.letter}</span>
-              <div className="absolute inset-0 transition-colors duration-300 bg-charcoal-900/20 group-hover:bg-charcoal-900/35" />
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <h3 className="mb-2 text-2xl font-light tracking-widest text-white font-display">{cat.label}</h3>
-                <span className="font-body text-xs text-white tracking-[0.2em] uppercase border-b border-white/60 pb-0.5">Shop Now</span>
-              </div>
-            </Link>
-          ))}
+          {categoryBannersMeta.map((cat) => {
+            const img = bannerImages[cat.sectionKey];
+            return (
+              <Link key={cat.label} to={cat.href} className="relative overflow-hidden aspect-[3/4] group bg-stone-200">
+                {img ? (
+                  <img src={img} alt={cat.label}
+                    className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-stone-300 animate-pulse" />
+                )}
+                <span className="absolute inset-0 flex items-center justify-center font-display text-[10rem] font-bold text-white/10 select-none pointer-events-none">{cat.letter}</span>
+                <div className="absolute inset-0 transition-colors duration-300 bg-charcoal-900/20 group-hover:bg-charcoal-900/35" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="mb-2 text-2xl font-light tracking-widest text-white font-display">{cat.label}</h3>
+                  <span className="font-body text-xs text-white tracking-[0.2em] uppercase border-b border-white/60 pb-0.5">Shop Now</span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
-      {/* ── TICKER ── */}
       <Ticker />
 
-      {/* ── EDITORIAL SPLIT ── */}
+      {/* ── New Season ── */}
       <section className="px-6 py-20">
         <div className="mx-auto max-w-7xl">
           <div className="grid md:grid-cols-2 gap-0 items-stretch min-h-[480px]">
@@ -194,10 +218,16 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="grid h-full grid-cols-2 gap-2">
-                  <img src="/images/luna-dress-1.jpg" alt="Collection" className="object-cover w-full h-full col-span-1"
-                    onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80'; }} />
-                  <img src="/images/coral-cape-dress-2.jpg" alt="Collection" className="object-cover w-full h-full col-span-1"
-                    onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400&q=80'; }} />
+                  {featuredImages[0] ? (
+                    <img src={featuredImages[0]} alt="Featured product" className="object-cover w-full h-full col-span-1" loading="lazy" />
+                  ) : (
+                    <div className="w-full h-full col-span-1 bg-stone-200 animate-pulse" />
+                  )}
+                  {featuredImages[1] ? (
+                    <img src={featuredImages[1]} alt="Featured product" className="object-cover w-full h-full col-span-1" loading="lazy" />
+                  ) : (
+                    <div className="w-full h-full col-span-1 bg-stone-300 animate-pulse" />
+                  )}
                 </div>
               </div>
             </div>
@@ -214,16 +244,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SPRING COLLECTION banner ── */}
-      <section className="relative overflow-hidden">
-        <div className="px-6 bg-taupe-700 py-14">
-          <div className="mx-auto max-w-7xl">
-            <h2 className="font-display text-6xl sm:text-8xl md:text-[10rem] text-white/30 font-bold leading-none mb-4 select-none">Spring Collection</h2>
-          </div>
-        </div>
-      </section>
-
-      {/* ── NEW ARRIVALS ── */}
+      {/* ── New Arrivals carousel ── */}
       <section className="py-16 bg-stone-50">
         <div className="px-6 mx-auto max-w-7xl">
           <div className="mb-10 text-center animate-on-scroll">
@@ -234,14 +255,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── TICKER 2 ── */}
       <Ticker
         items={['Pay with Paystack', 'WhatsApp ordering available', 'New arrivals weekly', 'Nationwide delivery', 'Trusted by 3,000+ customers']}
         bgClass="bg-charcoal-900"
         textClass="text-white/50"
       />
 
-      {/* ── WOMEN'S PICKS ── */}
+      {/* ── Women's Picks ── */}
       <section className="py-16 bg-white">
         <div className="px-6 mx-auto max-w-7xl">
           <div className="mb-10 text-center animate-on-scroll">
@@ -250,30 +270,16 @@ export default function Home() {
           </div>
           <WomensCarousel allProducts={allProducts} scrollRef={scrollRef} atStart={atStart} atEnd={atEnd} onScroll={scrollCarousel} />
           <div className="mt-10 text-center">
-            <Link to="/products?gender=women" className="inline-flex items-center gap-2 btn-outline">Shop Now <ArrowRight size={16} /></Link>
+            <Link to="/products?section=women" className="inline-flex items-center gap-2 btn-outline">Shop Now <ArrowRight size={16} /></Link>
           </div>
         </div>
       </section>
 
-      {/* ── MEN'S COLLECTION ── */}
       <MensCollection allProducts={allProducts} />
 
-      {/* ── FULL BLEED BANNER ── */}
-      <section className="relative h-64 overflow-hidden sm:h-80">
-        <img src="/images/teal-satin-boubou-1.jpg" alt="Summer Collection" className="object-cover w-full h-full"
-          onError={e => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1400&q=80'; }} />
-        <div className="absolute inset-0 bg-charcoal-900/50" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-          <p className="font-body text-[10px] tracking-[0.3em] uppercase text-white/60 mb-3">Selected Just For You</p>
-          <h2 className="mb-4 text-5xl font-light tracking-widest text-white font-display sm:text-7xl md:text-8xl">SUMMER COLLECTION</h2>
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 font-body text-xs tracking-[0.2em] uppercase text-white/70 mb-6">
-            {['Boubous', 'Gowns', 'Ankara', 'Perfumes', 'And Much More...'].map(c => <span key={c}>{c}</span>)}
-          </div>
-          <Link to="/products" className="btn-outline-white">Shop Now</Link>
-        </div>
-      </section>
+      <FragrancesCollection allProducts={allProducts} />
 
-      {/* ── TESTIMONIALS ── */}
+      {/* ── Testimonials ── */}
       <section className="py-16 bg-charcoal-900">
         <div className="max-w-5xl px-6 mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
@@ -296,61 +302,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── INSTAGRAM GRID ── */}
+      {/* ── Instagram / Follow Us ── */}
       <section className="bg-white py-14">
         <div className="px-6 mx-auto text-center max-w-7xl">
-          <p className="font-body text-xs tracking-[0.25em] uppercase text-stone-400 mb-8">Follow Us</p>
-          <h3 className="mb-8 text-3xl italic font-light font-display text-charcoal-800">@NuraBaharNigeria</h3>
-          <div className="grid grid-cols-3 gap-1 sm:grid-cols-6">
-            {[
-              'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
-              'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80',
-              'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80',
-              'https://images.unsplash.com/photo-1516726817505-f5ed825624d8?w=400&q=80',
-              'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80',
-            ].map((src, i) => (
-              <a key={i} href="https://instagram.com" target="_blank" rel="noopener noreferrer"
-                className="overflow-hidden aspect-square group bg-stone-100">
-                <img src={src} alt={'Style ' + (i+1)}
-                  className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-              </a>
-            ))}
-          </div>
+          <p className="font-body text-xs tracking-[0.25em] uppercase text-stone-400 mb-3">Follow Us</p>
+          <a
+            href="https://instagram.com/nurabaharnigeria"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mb-8 text-3xl italic font-light transition-colors font-display text-charcoal-800 hover:text-blush-500"
+          >
+            @NuraBaharNigeria
+          </a>
+          <InstagramGrid />
         </div>
       </section>
+
     </div>
   );
 }
 
-// ── sub-components ────────────────────────────────────────────────────────────
-
-function normalizeHomeProduct(record) {
-  const base = 'http://localhost:8090';
-  return {
-    id:            record.id,
-    name:          record.name,
-    category:      record.category,
-    gender:        record.gender || 'women',
-    price:         Number(record.price),
-    originalPrice: record.originalPrice ? Number(record.originalPrice) : null,
-    description:   record.description || '',
-    colors: typeof record.colors === 'string' ? JSON.parse(record.colors) : (record.colors || []),
-    sizes:  typeof record.sizes  === 'string' ? JSON.parse(record.sizes)  : (record.sizes  || []),
-    images: (record.images || []).map(img =>
-      base + '/api/files/' + record.collectionId + '/' + record.id + '/' + img
-    ),
-    badge:    record.badge    || null,
-    featured: record.featured || false,
-    rating:   Number(record.rating) || 5,
-    stock:    Number(record.stock)  || 0,
-  };
-}
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function FeaturedTabCarousel({ allProducts }) {
   const [tab, setTab] = useState('women');
   const scrollRef = useRef(null);
-  const products = allProducts.filter(p => p.gender === tab).map(normalizeHomeProduct);
+
+  const products = tab === 'fragrance'
+    ? allProducts.filter(isFragrance)
+    : allProducts.filter(p => matchesGender(p, tab));
 
   const scroll = (dir) => {
     const el = scrollRef.current;
@@ -359,10 +339,13 @@ function FeaturedTabCarousel({ allProducts }) {
     el.scrollBy({ left: dir * ((card?.offsetWidth ?? 280) + 20), behavior: 'smooth' });
   };
 
+  const tabLink = `/products?section=${tab}`;
+  const emptyLabel = tab === 'fragrance' ? 'fragrance' : tab;
+
   return (
     <>
       <div className="flex items-center mb-8 border-b border-stone-200">
-        {[['women','WOMEN'],['men','MEN']].map(([val, label]) => (
+        {[['women','WOMEN'],['men','MEN'],['fragrance','FRAGRANCE']].map(([val, label]) => (
           <button key={val} onClick={() => setTab(val)}
             className={'relative px-6 py-3 font-body text-sm font-medium tracking-wider transition-colors ' + (
               tab === val ? 'text-charcoal-900' : 'text-stone-400 hover:text-charcoal-700'
@@ -378,7 +361,12 @@ function FeaturedTabCarousel({ allProducts }) {
       </div>
 
       {products.length === 0 ? (
-        <p className="py-10 text-xs text-center font-body text-stone-400">No {tab} products yet.</p>
+        <div className="py-10 text-center">
+          <p className="mb-3 text-xs font-body text-stone-400">No {emptyLabel} products yet.</p>
+          <Link to={tabLink} className="text-xs underline transition-colors font-body text-blush-500 hover:text-blush-600 underline-offset-2">
+            Browse {emptyLabel === 'fragrance' ? 'Fragrance' : emptyLabel}
+          </Link>
+        </div>
       ) : (
         <div ref={scrollRef} className="flex gap-5 pb-2 overflow-x-auto no-scrollbar" style={{ scrollSnapType: 'x mandatory' }}>
           {products.map(product => (
@@ -393,7 +381,7 @@ function FeaturedTabCarousel({ allProducts }) {
 }
 
 function WomensCarousel({ allProducts, scrollRef, atStart, atEnd, onScroll }) {
-  const women = allProducts.filter(p => p.gender === 'women').map(normalizeHomeProduct);
+  const women = allProducts.filter(p => matchesGender(p, 'women'));
 
   return (
     <>

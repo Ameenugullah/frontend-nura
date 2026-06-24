@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import { getProducts } from '../lib/api';
 import ProductCard from '../components/ProductCard';
+import { NAV_SECTIONS, normalize, matchesGender, isFragrance } from '../lib/categories';
 
 const sortOptions = [
   { value: 'default',    label: 'Default' },
@@ -11,94 +12,124 @@ const sortOptions = [
   { value: 'rating',     label: 'Top Rated' },
 ];
 
-const womenCats = ['All', 'Boubous', 'Gowns', 'Ankara', 'Perfumes'];
-const menCats   = ['All', 'Agbada', 'Kaftan', 'Babariga', 'Senator'];
+// "All" is a synthetic pseudo-section — not in NAV_SECTIONS but always
+// shown first in the tab row.
+const SECTION_TABS = [{ key: 'all', label: 'All' }, ...NAV_SECTIONS.map(s => ({ key: s.key, label: s.label }))];
+
+function sectionByKey(key) {
+  return NAV_SECTIONS.find(s => s.key === key) || null;
+}
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Always read parameters directly from URL search parameters to maintain single source of truth
+  // URLs look like:
+  //   /products?section=women
+  //   /products?section=men&category=Kaftan
+  //   /products?section=fragrance&category=Perfume
+  // "section" is the canonical param — replaces old ?gender= / ?category=Fragrance.
+  let paramSection    = searchParams.get('section')  || 'all';
   const paramCategory = searchParams.get('category') || 'All';
-  const paramGender   = searchParams.get('gender')   || 'all';
   const paramQ        = searchParams.get('q')        || '';
 
-  const [allProducts, setAllProducts] = useState([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
-  const [sort,        setSort]        = useState('default');
-  const [showFilters, setShowFilters] = useState(false);
-  const [priceMax,    setPriceMax]    = useState(200000);
+  // Backward compat: old links used ?gender= or ?category=Fragrance.
+  const legacyGender = searchParams.get('gender');
+  if (paramSection === 'all' && legacyGender) {
+    paramSection = normalize(legacyGender) === 'men' ? 'men' : 'women';
+  }
+  if (paramSection === 'all' && normalize(paramCategory) === 'fragrance') {
+    paramSection = 'fragrance';
+  }
 
-  // Fetch all products once on mount
+  // Rewrite legacy URLs to the canonical ?section= form.
   useEffect(() => {
-    setLoadingProducts(true);
-    getProducts()
-      .then(data => setAllProducts(data))
-      .catch(err => console.error("Error fetching products:", err))
-      .finally(() => setLoadingProducts(false));
+    const hasLegacyGender    = searchParams.has('gender');
+    const hasLegacyFragrance = normalize(searchParams.get('category')) === 'fragrance';
+    if (hasLegacyGender || hasLegacyFragrance) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('gender');
+      if (hasLegacyFragrance) next.delete('category');
+      if (paramSection !== 'all') next.set('section', paramSection);
+      setSearchParams(next, { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Compute filtered items reactively from state and URL params
+  const [allProducts,      setAllProducts]      = useState([]);
+  const [loadingProducts,  setLoadingProducts]  = useState(true);
+  const [loadError,        setLoadError]        = useState(false);
+  const [sort,             setSort]             = useState('default');
+  const [showFilters,      setShowFilters]      = useState(false);
+  const [priceMax,         setPriceMax]         = useState(200000);
+
+  // Fetch all products once; filter client-side so casing mismatches never matter.
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingProducts(true);
+    setLoadError(false);
+    getProducts()
+      .then(data => { if (!cancelled) setAllProducts(data); })
+      .catch(() => { if (!cancelled) setLoadError(true); })
+      .finally(() => { if (!cancelled) setLoadingProducts(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   const filteredProducts = useMemo(() => {
     let list = [...allProducts];
 
-    // 1. Filter by Search Query
+    // 1. Search
     if (paramQ.trim()) {
-      const q = paramQ.toLowerCase();
+      const q = normalize(paramQ);
       list = list.filter(p =>
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.category || '').toLowerCase().includes(q) ||
-        (p.description || '').toLowerCase().includes(q)
+        normalize(p.name).includes(q) ||
+        normalize(p.category).includes(q) ||
+        normalize(p.description).includes(q)
       );
     }
 
-    // 2. Filter by Gender (Normalized to lower-case)
-    if (paramGender !== 'all') {
-      list = list.filter(p => 
-        p.gender && p.gender.toLowerCase() === paramGender.toLowerCase()
-      );
+    // 2. Section filter
+    const section = sectionByKey(paramSection);
+    if (section) {
+      if (section.type === 'gender') {
+        list = list.filter(p => matchesGender(p, section.value));
+      } else if (section.type === 'fragrance') {
+        list = list.filter(isFragrance);
+      }
     }
 
-    // 3. Filter by Category (Normalized to lower-case to avoid case-mismatches with DB)
-    if (paramCategory !== 'All') {
-      list = list.filter(p => 
-        p.category && p.category.toLowerCase().trim() === paramCategory.toLowerCase().trim()
-      );
+    // 3. Sub-category filter within section
+    if (normalize(paramCategory) !== 'all') {
+      list = list.filter(p => normalize(p.category) === normalize(paramCategory));
     }
 
-    // 4. Filter by Max Price
+    // 4. Price cap
     list = list.filter(p => p.price <= priceMax);
 
-    // 5. Apply Sorting
+    // 5. Sort
     if (sort === 'price-asc')  list.sort((a, b) => a.price - b.price);
     if (sort === 'price-desc') list.sort((a, b) => b.price - a.price);
     if (sort === 'rating')     list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
     return list;
-  }, [allProducts, paramQ, paramGender, paramCategory, sort, priceMax]);
+  }, [allProducts, paramQ, paramSection, paramCategory, sort, priceMax]);
 
-  // Determine active category list based on gender URL param
-  const activeCats = paramGender === 'men' ? menCats : womenCats;
+  // Category pills for the active section.
+  const activeSection = sectionByKey(paramSection);
+  const activeCats    = activeSection ? activeSection.categories : (NAV_SECTIONS[0]?.categories || []);
 
-  // URL Mutation Engine helper
   const setParam = (key, val) => {
     const next = new URLSearchParams(searchParams);
-    if (val && val !== 'all' && val !== 'All') {
-      next.set(key, val);
-    } else {
-      next.delete(key);
-    }
+    if (val && normalize(val) !== 'all') next.set(key, val);
+    else next.delete(key);
     setSearchParams(next);
   };
 
-  const handleGenderChange = (selectedGender) => {
+  const handleSectionChange = (selectedKey) => {
     const next = new URLSearchParams(searchParams);
-    if (selectedGender !== 'all') {
-      next.set('gender', selectedGender);
-    } else {
-      next.delete('gender');
-    }
-    // Always clear out active single-category when jumping between global gender scopes
-    next.delete('category'); 
+    next.delete('gender');
+    if (selectedKey !== 'all') next.set('section', selectedKey);
+    else next.delete('section');
+    next.delete('category'); // reset sub-category when section changes
     setSearchParams(next);
   };
 
@@ -108,13 +139,14 @@ export default function Products() {
     setSearchParams({});
   };
 
-  const hasActiveFilters = paramCategory !== 'All' || paramGender !== 'all' || paramQ || sort !== 'default';
+  const hasActiveFilters = normalize(paramCategory) !== 'all' || paramSection !== 'all' || paramQ || sort !== 'default';
 
   const pageTitle = paramQ
-    ? 'Search: "' + paramQ + '"'
-    : paramGender === 'men'   ? "Men's Collection"
-    : paramGender === 'women' ? "Women's Collection"
-    : paramCategory !== 'All' ? paramCategory
+    ? `Search: "${paramQ}"`
+    : paramSection === 'men'       ? "Men's Collection"
+    : paramSection === 'women'     ? "Women's Collection"
+    : paramSection === 'fragrance' ? 'Fragrance'
+    : paramCategory !== 'All'      ? paramCategory
     : 'All Products';
 
   return (
@@ -129,12 +161,12 @@ export default function Products() {
       </div>
 
       <div className="px-6 pb-20 mx-auto max-w-7xl">
-        {/* header row */}
+        {/* header */}
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl italic font-light font-display sm:text-4xl text-charcoal-800">{pageTitle}</h1>
             <p className="mt-1 text-xs font-body text-stone-400">
-              {loadingProducts ? 'Loading…' : filteredProducts.length + ' products'}
+              {loadingProducts ? 'Loading…' : `${filteredProducts.length} products`}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -158,27 +190,27 @@ export default function Products() {
           </div>
         </div>
 
-        {/* gender tabs */}
+        {/* section tabs — All / Women / Men / Fragrance */}
         <div className="flex mb-6 border-b border-stone-200">
-          {[['all','All'],['women','Women'],['men','Men']].map(([val, label]) => (
-            <button key={val}
-              onClick={() => handleGenderChange(val)}
+          {SECTION_TABS.map(({ key, label }) => (
+            <button key={key}
+              onClick={() => handleSectionChange(key)}
               className={'relative px-5 py-3 font-body text-sm font-medium tracking-wide transition-colors ' + (
-                paramGender === val ? 'text-charcoal-900' : 'text-stone-400 hover:text-charcoal-700'
+                paramSection === key ? 'text-charcoal-900' : 'text-stone-400 hover:text-charcoal-700'
               )}>
               {label}
-              {paramGender === val && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-charcoal-900" />}
+              {paramSection === key && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-charcoal-900" />}
             </button>
           ))}
         </div>
 
-        {/* category pills */}
+        {/* sub-category pills */}
         <div className="flex flex-wrap gap-2 mb-6">
           {activeCats.map(cat => (
             <button key={cat}
               onClick={() => setParam('category', cat)}
               className={'font-body text-xs px-4 py-1.5 border transition-all duration-150 ' + (
-                paramCategory === cat
+                normalize(paramCategory) === normalize(cat)
                   ? 'bg-charcoal-900 text-white border-charcoal-900'
                   : 'border-stone-200 text-charcoal-700 hover:border-charcoal-700 bg-white'
               )}>
@@ -214,12 +246,17 @@ export default function Products() {
             <div className="w-8 h-8 mx-auto mb-4 border-2 rounded-full border-stone-200 border-t-charcoal-800 animate-spin" />
             <p className="text-sm font-body text-stone-400">Loading products…</p>
           </div>
+        ) : loadError ? (
+          <div className="py-20 text-center">
+            <p className="mb-4 text-sm font-body text-stone-400">
+              Couldn't reach the store. Check your connection and try again.
+            </p>
+            <button onClick={() => window.location.reload()} className="btn-outline">Retry</button>
+          </div>
         ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
-            {filteredProducts.map((product, i) => (
-              <div key={product.id} className="animate-on-scroll" style={{ transitionDelay: (i % 8) * 40 + 'ms' }}>
-                <ProductCard product={product} />
-              </div>
+            {filteredProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (

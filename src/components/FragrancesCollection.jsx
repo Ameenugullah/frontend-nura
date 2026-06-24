@@ -2,34 +2,18 @@ import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import ProductCard from './ProductCard';
+import { isFragrance } from '../lib/categories';
 
-const PB_BASE = 'http://localhost:8090';
-
-function normalizeProduct(record) {
-  return {
-    id:            record.id,
-    name:          record.name,
-    category:      record.category,
-    gender:        record.gender || 'women',
-    price:         Number(record.price),
-    originalPrice: record.originalPrice ? Number(record.originalPrice) : null,
-    description:   record.description || '',
-    colors: typeof record.colors === 'string' ? JSON.parse(record.colors) : (record.colors || []),
-    sizes:  typeof record.sizes  === 'string' ? JSON.parse(record.sizes)  : (record.sizes  || []),
-    images: (record.images || []).map(img =>
-      PB_BASE + '/api/files/' + record.collectionId + '/' + record.id + '/' + img
-    ),
-    badge:    record.badge    || null,
-    featured: record.featured || false,
-    rating:   Number(record.rating) || 5,
-    stock:    Number(record.stock)  || 0,
-  };
-}
-
+// Fragrance is the 3rd main nav section (alongside Women / Men). It is not
+// gender-scoped — any product tagged Perfume or Incense shows here,
+// regardless of the "gender" field on the record. isFragrance() is the
+// single source of truth for which categories count as Fragrance.
 export default function FragrancesCollection({ allProducts = [] }) {
   const scrollRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd,   setAtEnd]   = useState(false);
+
+  const fragranceProducts = allProducts.filter(isFragrance);
 
   const onScroll = () => {
     const el = scrollRef.current;
@@ -44,7 +28,7 @@ export default function FragrancesCollection({ allProducts = [] }) {
     onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [fragranceProducts.length]);
 
   const scroll = (dir) => {
     const el = scrollRef.current;
@@ -53,10 +37,6 @@ export default function FragrancesCollection({ allProducts = [] }) {
     el.scrollBy({ left: dir * ((card?.offsetWidth ?? 280) + 20), behavior: 'smooth' });
   };
 
-  const fragranceProducts = allProducts
-    .filter(p => p.category === 'Perfumes')
-    .map(normalizeProduct);
-
   if (fragranceProducts.length === 0) return null;
 
   return (
@@ -64,8 +44,8 @@ export default function FragrancesCollection({ allProducts = [] }) {
       <div className="px-6 mx-auto max-w-7xl">
         <div className="flex items-end justify-between mb-10">
           <div>
-            <span className="block mb-2 tag">Perfumes & Incense</span>
-            <h2 className="italic font-light section-heading">Fragrances Worth Wearing</h2>
+            <span className="block mb-2 tag">Fragrance</span>
+            <h2 className="italic font-light section-heading">Signature Scents</h2>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden gap-2 sm:flex">
@@ -78,28 +58,24 @@ export default function FragrancesCollection({ allProducts = [] }) {
                 <ChevronRight size={16} />
               </button>
             </div>
-            <Link to="/products?category=Perfumes"
+            <Link to="/products?section=fragrance"
               className="items-center hidden gap-2 text-sm transition-colors sm:flex font-body text-charcoal-700 hover:text-blush-500">
               View all <ArrowRight size={16} />
             </Link>
           </div>
         </div>
 
-        <div ref={scrollRef}
-          className="flex gap-5 pb-2 overflow-x-auto no-scrollbar"
-          style={{ scrollSnapType: 'x mandatory' }}>
+        <div ref={scrollRef} className="flex gap-5 pb-2 overflow-x-auto no-scrollbar" style={{ scrollSnapType: 'x mandatory' }}>
           {fragranceProducts.map(product => (
-            <div key={product.id}
-              className="flex-shrink-0 w-[80vw] sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]"
-              style={{ scrollSnapAlign: 'start' }}>
+            <div key={product.id} className="flex-shrink-0 w-[80vw] sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]" style={{ scrollSnapAlign: 'start' }}>
               <ProductCard product={product} />
             </div>
           ))}
         </div>
 
         <div className="mt-10 text-center">
-          <Link to="/products?category=Perfumes" className="inline-flex items-center gap-2 btn-outline">
-            Shop Fragrances <ArrowRight size={16} />
+          <Link to="/products?section=fragrance" className="inline-flex items-center gap-2 btn-outline">
+            Shop Fragrance <ArrowRight size={16} />
           </Link>
         </div>
       </div>

@@ -7,15 +7,21 @@ import {
   RefreshCw, Wifi, WifiOff,
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
+import { ALL_CATEGORIES, isFragranceCategory } from '../lib/categories';
 
 // ── shared ───────────────────────────────────────────────────────────────────
 const STATUS_STYLES = {
   pending:    'bg-amber-50 text-amber-700 border-amber-200',
   processing: 'bg-blue-50 text-blue-700 border-blue-200',
+  paid:       'bg-emerald-50 text-emerald-700 border-emerald-200',
   shipped:    'bg-purple-50 text-purple-700 border-purple-200',
   delivered:  'bg-green-50 text-green-700 border-green-200',
   cancelled:  'bg-red-50 text-red-700 border-red-200',
+  failed:     'bg-red-50 text-red-700 border-red-200',
+  refunded:   'bg-stone-100 text-stone-600 border-stone-300',
 };
+
+const PB_ADMIN_URL = (import.meta.env.VITE_PB_URL || 'http://127.0.0.1:8090') + '/_/';
 
 function StatusBadge({ status }) {
   return (
@@ -122,7 +128,7 @@ function AdminSidebar({ mobile, onClose }) {
       </nav>
 
       <div className="px-3 pt-4 pb-6 border-t border-white/10">
-        <a href="http://localhost:8090/_/" target="_blank" rel="noopener noreferrer"
+        <a href={PB_ADMIN_URL} target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-3 px-3 py-2.5 font-body text-xs text-stone-400 hover:text-white transition-colors mb-1">
           <Settings size={14} />
           PocketBase Admin UI
@@ -231,14 +237,14 @@ function AdminProducts() {
   const [saving,     setSaving]     = useState(false);
 
   const emptyForm = {
-    name: '', category: 'Gowns', gender: 'women',
+    name: '', category: ALL_CATEGORIES[0], gender: '',
     price: '', originalPrice: '', description: '',
     colors: '', sizes: '', badge: '', stock: '10', featured: false,
   };
 
   const [form,          setForm]          = useState(emptyForm);
-  const [imageFiles,    setImageFiles]    = useState([]);   // File objects to upload
-  const [imagePreviews, setImagePreviews] = useState([]);   // preview URLs (blob: for new, http: for existing)
+  const [imageFiles,    setImageFiles]    = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   const openNew = () => {
     setEditTarget(null);
@@ -252,6 +258,7 @@ function AdminProducts() {
     setEditTarget(p);
     setForm({
       ...p,
+      gender: p.gender || '',
       colors: Array.isArray(p.colors) ? p.colors.join(', ') : (p.colors || ''),
       sizes:  Array.isArray(p.sizes)  ? p.sizes.join(', ')  : (p.sizes  || ''),
       price:         String(p.price),
@@ -272,12 +279,10 @@ function AdminProducts() {
       i < imageFiles.length ? imagePreviews[i] : URL.createObjectURL(f)
     );
     setImagePreviews(previews);
-    // reset input so the same file can be picked again if removed
     e.target.value = '';
   };
 
   const removeImage = (i) => {
-    // revoke blob URL to free memory
     if (imagePreviews[i]?.startsWith('blob:')) URL.revokeObjectURL(imagePreviews[i]);
     setImageFiles(prev => prev.filter((_, idx) => idx !== i));
     setImagePreviews(prev => prev.filter((_, idx) => idx !== i));
@@ -287,8 +292,12 @@ function AdminProducts() {
     e.preventDefault();
     setSaving(true);
     try {
+      const fragranceSelected = isFragranceCategory(form.category);
       const data = {
         ...form,
+        // Defense in depth: never persist a gender for Fragrance, even if
+        // one is somehow still present in form state.
+        gender:        fragranceSelected ? '' : (form.gender || 'women'),
         price:         Number(form.price),
         originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
         stock:         Number(form.stock),
@@ -301,7 +310,6 @@ function AdminProducts() {
       setShowForm(false);
     } catch (err) {
       console.error('Save product failed:', err);
-      // Show a helpful message to the admin and keep the form open for fixes
       alert('Error saving product: ' + (err.message || 'Unknown error. Check console for details.'));
     } finally {
       setSaving(false);
@@ -322,14 +330,12 @@ function AdminProducts() {
         </button>
       </div>
 
-      {/* search */}
       <div className="relative max-w-sm">
         <Search size={14} className="absolute -translate-y-1/2 left-3 top-1/2 text-stone-400" />
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search products…" className="text-sm input-field pl-9" />
       </div>
 
-      {/* table */}
       <div className="overflow-x-auto bg-white border border-stone-200">
         <table className="w-full min-w-[640px]">
           <thead className="border-b bg-stone-50 border-stone-200">
@@ -349,7 +355,9 @@ function AdminProducts() {
                   <div className="flex items-center gap-3">
                     {p.images?.[0] ? (
                       <img src={p.images[0]} alt={p.name}
-                        className="object-cover w-10 h-10 border border-stone-200 shrink-0" />
+                        className="object-cover w-10 h-10 border border-stone-200 shrink-0"
+                        onError={e => { e.target.onerror = null; e.target.src = '/images/placeholder-product.svg'; }}
+                      />
                     ) : (
                       <div className="flex items-center justify-center w-10 h-10 border bg-stone-100 border-stone-200 shrink-0">
                         <Package size={14} className="text-stone-400" />
@@ -416,7 +424,6 @@ function AdminProducts() {
             <form onSubmit={handleSave} className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
 
-                {/* name */}
                 <div className="sm:col-span-2">
                   <label className="label-xs">Name *</label>
                   <input required value={form.name}
@@ -424,28 +431,54 @@ function AdminProducts() {
                     className="text-sm input-field" placeholder="Luna Dress" />
                 </div>
 
-                {/* category + gender */}
                 <div>
                   <label className="label-xs">Category</label>
                   <select value={form.category}
-                    onChange={e => setForm(f => ({...f, category: e.target.value}))}
+                    onChange={e => {
+                      const nextCategory = e.target.value;
+                      setForm(f => ({
+                        ...f,
+                        category: nextCategory,
+                        // Fragrance is gender-neutral: clear gender so it can
+                        // never be saved on a fragrance product. Switching
+                        // AWAY from Fragrance restores a sensible default.
+                        gender: isFragranceCategory(nextCategory)
+                          ? ''
+                          : (f.gender || 'women'),
+                      }));
+                    }}
                     className="text-sm input-field">
-                    {['Boubous','Gowns','Ankara','Perfumes','Agbada','Kaftan','Babariga','Senator'].map(c => (
-                      <option key={c}>{c}</option>
+                    {ALL_CATEGORIES.map(c => (
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="label-xs">Gender</label>
-                  <select value={form.gender}
-                    onChange={e => setForm(f => ({...f, gender: e.target.value}))}
-                    className="text-sm input-field">
-                    <option value="women">Women</option>
-                    <option value="men">Men</option>
-                  </select>
-                </div>
+                {/*
+                  FIX: Gender used to always render with a "None (optional
+                  for Fragrance)" option, leaving it up to the admin to
+                  remember to pick "None" every time. Now the field is hidden
+                  entirely for Fragrance (Perfume or Incense) — there's
+                  nothing to forget, and a short note explains why.
+                */}
+                {!isFragranceCategory(form.category) && (
+                  <div>
+                    <label className="label-xs">Gender</label>
+                    <select value={form.gender || 'women'}
+                      onChange={e => setForm(f => ({...f, gender: e.target.value}))}
+                      className="text-sm input-field">
+                      <option value="women">Women</option>
+                      <option value="men">Men</option>
+                    </select>
+                  </div>
+                )}
+                {isFragranceCategory(form.category) && (
+                  <div className="flex items-end">
+                    <p className="font-body text-[10px] text-stone-400 bg-stone-50 border border-stone-200 p-2.5 leading-relaxed">
+                      Fragrance products don't need a gender — they only appear in the Fragrance section.
+                    </p>
+                  </div>
+                )}
 
-                {/* price + original price */}
                 <div>
                   <label className="label-xs">Price (₦) *</label>
                   <input required type="number" min={0} value={form.price}
@@ -459,7 +492,6 @@ function AdminProducts() {
                     className="text-sm input-field" placeholder="Leave blank if no discount" />
                 </div>
 
-                {/* stock + badge */}
                 <div>
                   <label className="label-xs">Stock</label>
                   <input type="number" min={0} value={form.stock}
@@ -477,7 +509,6 @@ function AdminProducts() {
                   </select>
                 </div>
 
-                {/* colors + sizes */}
                 <div className="sm:col-span-2">
                   <label className="label-xs">Colors (comma-separated)</label>
                   <input value={form.colors}
@@ -488,10 +519,9 @@ function AdminProducts() {
                   <label className="label-xs">Sizes (comma-separated)</label>
                   <input value={form.sizes}
                     onChange={e => setForm(f => ({...f, sizes: e.target.value}))}
-                    className="text-sm input-field" placeholder="XS, S, M, L, XL" />
+                    className="text-sm input-field" placeholder="XS, S, M, L, XL — or 'One Size' for fragrance" />
                 </div>
 
-                {/* description */}
                 <div className="sm:col-span-2">
                   <label className="label-xs">Description</label>
                   <textarea rows={3} value={form.description}
@@ -499,7 +529,6 @@ function AdminProducts() {
                     className="text-sm resize-none input-field" />
                 </div>
 
-                {/* featured */}
                 <div className="flex items-center gap-2 sm:col-span-2">
                   <input type="checkbox" id="featured" checked={form.featured}
                     onChange={e => setForm(f => ({...f, featured: e.target.checked}))}
@@ -507,11 +536,9 @@ function AdminProducts() {
                   <label htmlFor="featured" className="text-xs font-body text-charcoal-700">Featured on homepage</label>
                 </div>
 
-                {/* ── image upload ── */}
                 <div className="sm:col-span-2">
                   <label className="label-xs">Product Images (up to 6)</label>
 
-                  {/* drop zone / file picker */}
                   <label className="mt-1 flex flex-col items-center justify-center gap-1.5 border border-dashed border-stone-300 py-5 cursor-pointer hover:border-charcoal-700 hover:bg-stone-50 transition-colors">
                     <Upload size={18} className="text-stone-400" />
                     <span className="text-xs font-body text-stone-400">Click to upload images</span>
@@ -527,9 +554,36 @@ function AdminProducts() {
                   </label>
 
                   {imagePreviews.length > 0 && (
-                    <p className="font-body text-[10px] text-stone-400 mt-1.5">
-                      {imagePreviews.length}/6 photos · hover an image to remove it · first image is the main photo
-                    </p>
+                    <>
+                      <div className="grid grid-cols-6 gap-2 mt-3">
+                        {imagePreviews.map((src, i) => (
+                          <div key={i} className="relative group aspect-square">
+                            <img
+                              src={src}
+                              alt={`Preview ${i + 1}`}
+                              className="object-cover w-full h-full border border-stone-200"
+                              onError={e => { e.target.onerror = null; e.target.src = '/images/placeholder-product.svg'; }}
+                            />
+                            {i === 0 && (
+                              <span className="absolute bottom-0 left-0 right-0 bg-charcoal-900/80 text-white text-[8px] font-body text-center py-0.5">
+                                MAIN
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeImage(i)}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-charcoal-900 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Remove image"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="font-body text-[10px] text-stone-400 mt-1.5">
+                        {imagePreviews.length}/6 photos · hover an image to remove it · first image is the main photo
+                      </p>
+                    </>
                   )}
                 </div>
 
@@ -573,6 +627,8 @@ function AdminOrders() {
   const [filter, setFilter] = useState('all');
   const [detail, setDetail] = useState(null);
 
+  const ALL_STATUSES = ['pending','processing','paid','shipped','delivered','cancelled','failed','refunded'];
+
   const filtered = orders.filter(o => {
     const matchFilter = filter === 'all' || o.status === filter;
     const matchSearch = !search || o.customerName?.toLowerCase().includes(search.toLowerCase()) || o.id.includes(search);
@@ -596,7 +652,7 @@ function AdminOrders() {
             placeholder="Search by name or ID…" className="text-sm input-field pl-9" />
         </div>
         <div className="flex flex-wrap gap-1">
-          {['all','pending','processing','shipped','delivered','cancelled'].map(s => (
+          {['all', ...ALL_STATUSES].map(s => (
             <button key={s} onClick={() => setFilter(s)}
               className={`font-body text-[10px] tracking-wider uppercase px-3 py-1.5 border transition-colors ${
                 filter === s ? 'bg-charcoal-900 text-white border-charcoal-900' : 'border-stone-200 text-stone-500 hover:border-charcoal-700'
@@ -608,7 +664,7 @@ function AdminOrders() {
       </div>
 
       <div className="overflow-x-auto bg-white border border-stone-200">
-        <table className="w-full min-w-[720px]">
+        <table className="w-full min-w-[760px]">
           <thead className="border-b bg-stone-50 border-stone-200">
             <tr className="text-left font-body text-[10px] tracking-[0.15em] uppercase text-stone-400">
               <th className="px-5 py-3">Order</th>
@@ -616,6 +672,7 @@ function AdminOrders() {
               <th className="px-5 py-3">Items</th>
               <th className="px-5 py-3">Total</th>
               <th className="px-5 py-3">Payment</th>
+              <th className="px-5 py-3">Pay Status</th>
               <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3 text-right">Actions</th>
             </tr>
@@ -632,12 +689,22 @@ function AdminOrders() {
                 <td className="px-5 py-3 text-xs font-semibold font-body text-charcoal-800">₦{(o.total || 0).toLocaleString('en-NG')}</td>
                 <td className="px-5 py-3 text-xs capitalize font-body text-charcoal-700">{o.paymentMethod || '—'}</td>
                 <td className="px-5 py-3">
+                  <span className={`font-body text-[10px] tracking-wider uppercase px-2 py-0.5 border ${
+                    o.paymentStatus === 'paid'   ? 'bg-green-50 text-green-600 border-green-200'
+                    : o.paymentStatus === 'failed' ? 'bg-red-50 text-red-600 border-red-200'
+                    : o.paymentStatus === 'verifying' ? 'bg-blue-50 text-blue-600 border-blue-200'
+                    : 'bg-stone-50 text-stone-500 border-stone-200'
+                  }`}>
+                    {o.paymentStatus || 'unpaid'}
+                  </span>
+                </td>
+                <td className="px-5 py-3">
                   <select value={o.status}
                     onChange={e => changeOrderStatus(o.id, e.target.value)}
                     className="appearance-none font-body text-[10px] tracking-wider uppercase pl-2 pr-6 py-1 border cursor-pointer focus:outline-none"
                     style={{ backgroundImage: 'none' }}
                   >
-                    {['pending','processing','shipped','delivered','cancelled'].map(s => (
+                    {ALL_STATUSES.map(s => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
@@ -657,7 +724,7 @@ function AdminOrders() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="py-12 text-xs text-center font-body text-stone-400">No orders found.</td></tr>
+              <tr><td colSpan={8} className="py-12 text-xs text-center font-body text-stone-400">No orders found.</td></tr>
             )}
           </tbody>
         </table>
@@ -687,8 +754,14 @@ function AdminOrders() {
                 </div>
                 <div>
                   <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-0.5">Payment</p>
-                  <p className="capitalize text-charcoal-700">{detail.paymentMethod || '—'}</p>
+                  <p className="capitalize text-charcoal-700">{detail.paymentMethod || '—'} · {detail.paymentStatus || 'unpaid'}</p>
                 </div>
+                {detail.paymentRef && (
+                  <div className="col-span-2">
+                    <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-0.5">Paystack Reference</p>
+                    <p className="text-charcoal-700">{detail.paymentRef}</p>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <p className="text-[10px] tracking-wider uppercase text-stone-400 mb-0.5">Delivery Address</p>
                   <p className="text-charcoal-700">{detail.address}, {detail.city}, {detail.state}</p>
@@ -718,11 +791,18 @@ function AdminOrders() {
                 <select value={detail.status}
                   onChange={e => { changeOrderStatus(detail.id, e.target.value); setDetail(d => ({...d, status: e.target.value})); }}
                   className="input-field text-xs py-1.5 flex-1">
-                  {['pending','processing','shipped','delivered','cancelled'].map(s => (
+                  {ALL_STATUSES.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
+              {detail.paymentMethod === 'online' && detail.paymentStatus !== 'paid' && (
+                <p className="font-body text-[10px] text-amber-600 bg-amber-50 border border-amber-200 p-2">
+                  This is an online payment order. Its status should normally be updated automatically by the
+                  Paystack webhook hook — manually marking it "paid" bypasses server-side verification. Only
+                  do this if you've independently confirmed the transaction in your Paystack dashboard.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -799,12 +879,10 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-stone-50">
-      {/* desktop sidebar */}
       <div className="hidden lg:block">
         <AdminSidebar />
       </div>
 
-      {/* mobile sidebar */}
       {mobileSidebar && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="absolute inset-0 bg-charcoal-900/50" onClick={() => setMobileSidebar(false)} />
@@ -814,7 +892,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* main content */}
       <main className="flex-1 min-w-0">
         <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-white border-b border-stone-200">
           <button onClick={() => setMobileSidebar(true)} className="lg:hidden">

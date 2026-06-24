@@ -1,58 +1,33 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { signIn, signOut, signUp, getCurrentUser, requestPasswordReset, checkPBHealth } from '../lib/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { signIn, signOut, getCurrentUser } from '../lib/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(getCurrentUser);
-  const [loading, setLoading] = useState(false);
-  const [pbLive, setPbLive]   = useState(false);
+  const [user, setUser] = useState(getCurrentUser());
 
-  useEffect(() => { checkPBHealth().then(setPbLive); }, []);
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
 
   const login = useCallback(async (email, password) => {
-    setLoading(true);
     try {
-      const auth = await signIn(email, password);
-      setUser(auth.record);
+      await signIn(email, password);
+      const u = getCurrentUser();
+      setUser(u);
       return { success: true };
     } catch (err) {
-      return { success: false, error: err.message || 'Invalid email or password.' };
-    } finally {
-      setLoading(false);
+      return { success: false, error: err.message || String(err) };
     }
   }, []);
 
-  const register = useCallback(async (email, password, name) => {
-    setLoading(true);
-    try {
-      await signUp(email, password, name);
-      const auth = await signIn(email, password);
-      setUser(auth.record);
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message || 'Registration failed.' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const logout = useCallback(async () => {
-    await signOut();
+  const logout = useCallback(() => {
+    signOut();
     setUser(null);
   }, []);
 
-  const forgotPassword = useCallback(async (email) => {
-    try {
-      await requestPasswordReset(email);
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message || 'Failed to send reset email.' };
-    }
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ user, loading, pbLive, login, register, logout, forgotPassword }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -60,6 +35,8 @@ export function AuthProvider({ children }) {
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be inside AuthProvider');
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
 };
+
+export default AuthContext;

@@ -1,4 +1,5 @@
 import pb from './pocketbase';
+import { normalize } from './categories';
 
 // ── HEALTH ───────────────────────────────────────────────────────────────────
 export async function checkPBHealth() {
@@ -63,13 +64,29 @@ export function isAdminLoggedIn() {
 }
 
 // ── PRODUCTS ──────────────────────────────────────────────────────────────────
+//
+// getProducts() fetches the FULL product list and lets the caller filter
+// client-side (see Products.jsx). This used to be fine, but to also support
+// fast server-side filtered fetches (e.g. for a paginated future), we still
+// accept optional category/gender args and build a PocketBase filter string,
+// fully normalized (trimmed + lower-cased) so "Fragrance" === "fragrance".
+//
 export async function getProducts(category, gender) {
   try {
-    const params = new URLSearchParams();
     const filters = [];
-    if (category && category !== 'All') filters.push('category = "' + category + '"');
-    if (gender && gender !== 'all') filters.push('gender = "' + gender + '"');
+    if (category && normalize(category) !== 'all') {
+      // PocketBase filter syntax doesn't support LOWER() out of the box on
+      // all deployments, so we filter case-sensitively here and let the
+      // client-side useMemo in Products.jsx do the normalized re-filter.
+      filters.push('category = "' + category.replace(/"/g, '\\"') + '"');
+    }
+    if (gender && normalize(gender) !== 'all') {
+      filters.push('gender = "' + gender.replace(/"/g, '\\"') + '"');
+    }
+
+    const params = new URLSearchParams();
     if (filters.length > 0) params.set('filter', filters.join(' && '));
+    params.set('perPage', '200'); // generous cap; raise if catalog grows
 
     const url = pb.baseUrl + '/api/collections/products/records' + (params.toString() ? '?' + params.toString() : '');
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
@@ -101,13 +118,12 @@ export async function createProduct(data) {
     const record = await pb.collection('products').create(formData);
     return normalizeProduct(record);
   } catch (err) {
-    // Try to extract structured error info from PocketBase client error
     let details = '';
     try {
       if (err?.data) details = JSON.stringify(err.data);
       else if (err?.response?.data) details = JSON.stringify(err.response.data);
       else details = String(err);
-    } catch (e) {
+    } catch {
       details = String(err);
     }
     console.error('createProduct error:', err, details);
@@ -130,23 +146,28 @@ export async function updateStock(id, stock) {
 }
 
 // ── ORDERS ────────────────────────────────────────────────────────────────────
+// NOTE: orders are created with status "pending" and a "paymentStatus" of
+// "unpaid". They only become "Paid"/"Completed" after server-side webhook
+// verification — see PAYMENT_ARCHITECTURE.md and pb_hooks/payments.pb.js.
 export async function createOrder(data) {
   const record = await pb.collection('orders').create({
-    customerName:  data.customerName,
-    email:         data.email,
-    phone:         data.phone || '',
-    address:       data.address,
-    city:          data.city,
-    state:         data.state || '',
-    country:       data.country || 'NG',
-    items:         JSON.stringify(data.items),
-    subtotal:      data.subtotal,
-    shipping:      data.shipping,
-    tax:           data.tax || 0,
-    total:         data.total,
-    paymentMethod: data.paymentMethod || 'online',
-    status:        'pending',
-    notes:         data.notes || '',
+    customerName:   data.customerName,
+    email:          data.email,
+    phone:          data.phone || '',
+    address:        data.address,
+    city:           data.city,
+    state:          data.state || '',
+    country:        data.country || 'NG',
+    items:          JSON.stringify(data.items),
+    subtotal:       data.subtotal,
+    shipping:       data.shipping,
+    tax:            data.tax || 0,
+    total:          data.total,
+    paymentMethod:  data.paymentMethod || 'online',
+    paymentRef:     data.paymentRef || '',     // Paystack reference, set before redirect
+    paymentStatus:  'unpaid',                  // unpaid | verifying | paid | failed
+    status:         'pending',                 // pending | processing | paid | failed | cancelled | refunded
+    notes:          data.notes || '',
   });
   return record;
 }
@@ -155,6 +176,7 @@ export async function getOrders(status) {
   try {
     const params = new URLSearchParams();
     if (status) params.set('filter', 'status = "' + status + '"');
+    params.set('perPage', '200');
 
     const headers = { 'Content-Type': 'application/json' };
     if (pb.authStore.token) headers['Authorization'] = 'Bearer ' + pb.authStore.token;
@@ -188,6 +210,28 @@ export async function deleteOrder(id) {
   await pb.collection('orders').delete(id);
 }
 
+// ── PAYMENT VERIFICATION (polling) ─────────────────────────────────────────
+// After redirecting back from Paystack, the frontend polls this endpoint to
+// see whether the PocketBase server-side hook has confirmed the webhook yet.
+// The actual verification call to Paystack's /transaction/verify endpoint
+// happens server-side in pb_hooks/payments.pb.js — never trust a client-side
+// "success" callback alone.
+export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeoutMs = 60000 } = {}) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const order = await getOrderById(orderId);
+      if (order.paymentStatus === 'paid' || order.paymentStatus === 'failed') {
+        return order;
+      }
+    } catch {
+      // keep polling — order may not be readable until auth catches up
+    }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  throw new Error('Payment verification timed out. Please contact support with your order reference.');
+}
+
 // ── USERS (admin view) ────────────────────────────────────────────────────────
 export async function getUsers() {
   try {
@@ -215,7 +259,11 @@ function buildProductFormData(data) {
   const fd = new FormData();
   fd.append('name',        data.name);
   fd.append('category',    data.category);
-  fd.append('gender',      data.gender || 'women');
+  // Fragrance products are gender-neutral by design and submit an explicit
+  // empty string for gender (see AdminDashboard.jsx handleSave). Only
+  // default to 'women' when gender is genuinely undefined/null — never when
+  // it's deliberately set to ''.
+  fd.append('gender',      data.gender === undefined || data.gender === null ? 'women' : data.gender);
   fd.append('price',       data.price);
   fd.append('description', data.description || '');
   fd.append('badge',       data.badge || '');
@@ -225,11 +273,14 @@ function buildProductFormData(data) {
   fd.append('sizes',       JSON.stringify(data.sizes  || []));
   if (data.originalPrice) fd.append('originalPrice', data.originalPrice);
   if (data.imageFiles && data.imageFiles.length > 0) {
-    data.imageFiles.forEach(function(f) { fd.append('images', f); });
+    data.imageFiles.forEach(function (f) { fd.append('images', f); });
   }
   return fd;
 }
 
+// Always derive file URLs from pb.baseUrl (which itself comes from
+// VITE_PB_URL) — never hardcode a host here. This is what makes images work
+// correctly in production builds regardless of where PocketBase is deployed.
 function getImageUrl(record, filename) {
   if (!filename) return '';
   try {
@@ -244,13 +295,18 @@ function normalizeProduct(record) {
     id:            record.id,
     name:          record.name,
     category:      record.category,
-    gender:        record.gender || 'women',
+    // Don't default missing gender to 'women' — Fragrance products are
+    // intentionally gender-neutral (empty string). Defaulting here would
+    // silently re-leak them into Women's-scoped views. Anywhere that needs
+    // a gender comparison should use matchesGender()/isFragrance() from
+    // lib/categories.js, which already account for this correctly.
+    gender:        record.gender || '',
     price:         Number(record.price),
     originalPrice: record.originalPrice ? Number(record.originalPrice) : null,
     description:   record.description || '',
     colors: typeof record.colors === 'string' ? JSON.parse(record.colors) : (record.colors || []),
     sizes:  typeof record.sizes  === 'string' ? JSON.parse(record.sizes)  : (record.sizes  || []),
-    images: (record.images || []).map(function(img) { return getImageUrl(record, img); }),
+    images: (record.images || []).map(function (img) { return getImageUrl(record, img); }),
     badge:    record.badge    || null,
     featured: record.featured || false,
     rating:   Number(record.rating) || 5,

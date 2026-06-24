@@ -26,6 +26,7 @@ export default function Checkout() {
   const [error, setError]       = useState('');
   const [orderId, setOrderId]   = useState('');
   const [method, setMethod]     = useState('online'); // 'online' | 'whatsapp'
+  const [whatsappDone, setWhatsappDone] = useState(false);
 
   const [form, setForm] = useState({
     customerName: '',
@@ -42,7 +43,6 @@ export default function Checkout() {
     setError('');
   };
 
-  // ── step 0: delivery validation ──────────────────────────────────────────
   const validateDelivery = () => {
     const { customerName, email, phone, address, city } = form;
     if (!customerName.trim()) return 'Please enter your full name.';
@@ -60,7 +60,7 @@ export default function Checkout() {
     setStep(1);
   };
 
-  // ── step 1: place order ───────────────────────────────────────────────────
+  // ── place order, then either open Paystack or send to WhatsApp ───────────
   const placeOrder = async () => {
     if (!cartItems.length) return;
     setLoading(true);
@@ -79,34 +79,40 @@ export default function Checkout() {
         total,
         paymentMethod: method,
       });
-      newOrderId = record.id || `local-${Date.now()}`;
-    } catch {
-      // PocketBase offline — generate local ref
-      newOrderId = `NB${Date.now()}`;
+      newOrderId = record.id;
+    } catch (err) {
+      setLoading(false);
+      setError('Could not create your order. Please check your connection and try again.');
+      console.error('createOrder failed:', err);
+      return;
     }
 
     setOrderId(newOrderId);
 
     if (method === 'online') {
-      // Paystack popup
+      // IMPORTANT: we do NOT clear the cart or show success here. The
+      // Paystack popup's callback only tells us the customer finished the
+      // card flow — it is not proof of payment. We hand off to
+      // /order/:id/verifying, which polls PocketBase for the server-verified
+      // result (see backend/pb_hooks/payments.pb.js).
       initializePaystackPayment({
         email:   form.email,
         amount:  total,
         orderId: newOrderId,
         name:    form.customerName,
         phone:   form.phone,
-        onSuccess: (resp) => {
+        onPopupClosed: ({ cancelled }) => {
           setLoading(false);
-          clearCart();
-          setStep(2);
-        },
-        onClose: () => {
-          setLoading(false);
-          setError('Payment was cancelled. Try again.');
+          if (cancelled) {
+            setError('Payment was cancelled. You can try again whenever you’re ready.');
+          } else {
+            navigate(`/order/${newOrderId}/verifying`);
+          }
         },
       });
     } else {
-      // WhatsApp order
+      // WhatsApp orders stay "pending" until the admin manually confirms
+      // payment in chat and updates the order status in the dashboard.
       sendWhatsAppOrder({
         customerName: form.customerName,
         phone:        form.phone,
@@ -121,6 +127,7 @@ export default function Checkout() {
       });
       setLoading(false);
       clearCart();
+      setWhatsappDone(true);
       setStep(2);
     }
   };
@@ -136,23 +143,22 @@ export default function Checkout() {
     );
   }
 
-  // ── success screen ────────────────────────────────────────────────────────
-  if (step === 2) {
+  // ── WhatsApp confirmation screen (Paystack flow redirects away instead) ──
+  if (step === 2 && whatsappDone) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center px-6">
         <div className="max-w-md w-full text-center">
           <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={32} className="text-green-600" />
           </div>
-          <h1 className="font-display text-4xl text-charcoal-800 font-light italic mb-3">Order Placed!</h1>
+          <h1 className="font-display text-4xl text-charcoal-800 font-light italic mb-3">Order Sent!</h1>
           <p className="font-body text-sm text-stone-500 mb-2">
-            {method === 'whatsapp'
-              ? 'Your order has been sent to our WhatsApp. The admin will confirm and send payment details shortly.'
-              : 'Payment confirmed! Your order is being processed.'}
+            Your order has been sent to our WhatsApp. The admin will confirm and send payment details shortly.
+            Your order will remain "Pending" until payment is confirmed.
           </p>
           {orderId && (
             <p className="font-body text-xs text-stone-400 mb-6">
-              Order ref: <span className="font-semibold text-charcoal-800">NB-{orderId}</span>
+              Order ref: <span className="font-semibold text-charcoal-800">NB-{orderId.slice(-6)}</span>
             </p>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -274,7 +280,7 @@ export default function Checkout() {
                       </div>
                       <p className="font-body text-xs text-stone-500 leading-relaxed">
                         Pay instantly with your debit/credit card, bank transfer, or USSD via Paystack.
-                        Your payment is secured with 256-bit SSL encryption.
+                        Your order is confirmed only after we verify the payment on our server.
                       </p>
                     </div>
                   </label>
@@ -319,7 +325,7 @@ export default function Checkout() {
 
                 <div className="flex items-center justify-center gap-1.5 mt-4">
                   <Lock size={11} className="text-stone-400" />
-                  <span className="font-body text-[10px] text-stone-400">Payments processed securely via Paystack</span>
+                  <span className="font-body text-[10px] text-stone-400">Payments verified server-side via Paystack</span>
                 </div>
               </div>
             )}
@@ -334,9 +340,9 @@ export default function Checkout() {
                   <div key={item.key} className="flex gap-3 items-center">
                     <div className="relative shrink-0">
                       <div className="w-14 h-16 bg-stone-100 overflow-hidden">
-                        <img src={item.images?.[0] || '/fallback.jpg'} alt={item.name}
+                        <img src={item.images?.[0] || '/images/placeholder-product.svg'} alt={item.name}
                           className="w-full h-full object-cover"
-                          onError={e => { e.target.onerror = null; e.target.src = '/images/fallback.svg'; }}
+                          onError={e => { e.target.onerror = null; e.target.src = '/images/placeholder-product.svg'; }}
                         />
                       </div>
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-charcoal-800 text-white text-[9px] font-body font-bold rounded-full flex items-center justify-center">

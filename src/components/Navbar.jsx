@@ -1,17 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, User, Heart, ShoppingBag, Menu, X, ChevronDown } from 'lucide-react';
-import { useCart }  from '../context/CartContext';
+import { useCart }      from '../context/CartContext';
+import { useWishlist }  from '../context/WishlistContext';
 import { useAuth }  from '../context/AuthContext';
+import { NAV_SECTIONS } from '../lib/categories';
 
-const navLinks = [
-  { label: 'Women', href: '/products?gender=women', sub: ['Boubous', 'Gowns', 'Ankara'] },
-  { label: 'Men',   href: '/products?gender=men',   sub: ['Agbada', 'Kaftan', 'Babariga', 'Senator'] },
-  { label: 'Fragrances', href: '/products?category=Perfumes', sub: ['Perfumes'] },
-];
+// Build navbar links directly from the shared taxonomy in lib/categories.js.
+// This guarantees the Navbar can NEVER drift out of sync with Products.jsx
+// or the Admin product form again — there is exactly one source of truth.
+// Every section (Women, Men, Fragrance) now uses the same ?section=<key>
+// URL convention, so there's no special-casing between gender-scoped and
+// category-scoped nav items anymore.
+const navLinks = NAV_SECTIONS.map(section => ({
+  label: section.label,
+  href: `/products?section=${section.key}`,
+  sub: section.categories.filter(c => c !== 'All'),
+  sectionKey: section.key,
+}));
 
 export default function Navbar() {
-  const { cartCount }      = useCart();
+  const { cartCount }       = useCart();
+  const { wishlistCount }   = useWishlist();
   const { user, logout }   = useAuth();
   const navigate           = useNavigate();
   const location           = useLocation();
@@ -52,7 +62,7 @@ export default function Navbar() {
   return (
     <>
       <div className="py-2 text-xs tracking-wider text-center bg-charcoal-900 text-stone-200 font-body">
-        Free shipping on orders over ₦30,000 &nbsp;·&nbsp; <Link to="/faq" className="underline underline-offset-2">Size guide</Link>
+        Free shipping on orders over ₦500,000 &nbsp;·&nbsp; <Link to="/faq" className="underline underline-offset-2">Size guide</Link>
       </div>
 
       <header className={'sticky top-0 z-50 transition-all duration-300 ' + (
@@ -72,18 +82,18 @@ export default function Navbar() {
             {navLinks.map(link => (
               <div key={link.label}
                 className="relative"
-                onMouseEnter={() => link.sub && openDrop(link.label)}
-                onMouseLeave={() => link.sub && closeDrop()}
+                onMouseEnter={() => link.sub.length > 0 && openDrop(link.label)}
+                onMouseLeave={() => link.sub.length > 0 && closeDrop()}
               >
                 <Link
                   to={link.href}
                   className="flex items-center gap-1 px-4 py-2 text-sm font-medium transition-colors duration-150 font-body text-charcoal-800 hover:text-blush-500"
                 >
                   {link.label}
-                  {link.sub && <ChevronDown size={13} className="opacity-60 mt-0.5" />}
+                  {link.sub.length > 0 && <ChevronDown size={13} className="opacity-60 mt-0.5" />}
                 </Link>
 
-                {link.sub && activeDropdown === link.label && (
+                {link.sub.length > 0 && activeDropdown === link.label && (
                   <div className="absolute left-0 z-50 pt-1 top-full"
                     onMouseEnter={() => openDrop(link.label)}
                     onMouseLeave={() => closeDrop()}
@@ -92,7 +102,7 @@ export default function Navbar() {
                       {link.sub.map(cat => (
                         <Link
                           key={cat}
-                          to={'/products?category=' + cat}
+                          to={'/products?section=' + link.sectionKey + '&category=' + encodeURIComponent(cat)}
                           className="block px-5 py-2.5 font-body text-sm text-charcoal-700 hover:bg-stone-50 hover:text-charcoal-900 transition-colors"
                         >
                           {cat}
@@ -149,8 +159,13 @@ export default function Navbar() {
               </Link>
             )}
 
-            <button className="items-center justify-center hidden transition-colors sm:flex w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Wishlist">
+            <button className="relative items-center justify-center hidden transition-colors sm:flex w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Wishlist">
               <Heart size={18} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-blush-500 text-white font-body text-[9px] rounded-full">
+                  {wishlistCount > 9 ? '9+' : wishlistCount}
+                </span>
+              )}
             </button>
 
             <Link to="/cart" className="relative flex items-center justify-center transition-colors w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Cart">
@@ -211,10 +226,10 @@ export default function Navbar() {
                   >
                     {link.label}
                   </Link>
-                  {link.sub && link.sub.map(cat => (
+                  {link.sub.map(cat => (
                     <Link
                       key={cat}
-                      to={'/products?category=' + cat}
+                      to={'/products?section=' + link.sectionKey + '&category=' + encodeURIComponent(cat)}
                       className="block pl-10 pr-6 py-2.5 font-body text-sm text-charcoal-700/70 hover:text-charcoal-900 border-b border-stone-50"
                     >
                       {cat}
