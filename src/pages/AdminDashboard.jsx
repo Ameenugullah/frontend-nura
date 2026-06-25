@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, Settings,
   LogOut, Menu, X, Plus, Pencil, Trash2, Search, Upload,
   TrendingUp, AlertTriangle, CheckCircle, Clock, Eye,
-  RefreshCw, Wifi, WifiOff, Instagram, GripVertical,
+  RefreshCw, Wifi, WifiOff, Instagram, GripVertical, Play,
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 import { ALL_CATEGORIES, isFragranceCategory } from '../lib/categories';
@@ -572,10 +572,13 @@ function AdminInstagramGrid() {
   const [confirm,    setConfirm]    = useState(null);
   const [saving,     setSaving]     = useState(false);
 
-  const emptyForm = { caption: '', link: '', order: '' };
-  const [form,        setForm]        = useState(emptyForm);
-  const [imageFile,   setImageFile]   = useState(null);
-  const [imagePreview,setImagePreview]= useState(null);
+  const emptyForm = { caption: '', link: '', sort_order: '', mediaType: 'image' };
+  const [form,         setForm]         = useState(emptyForm);
+  const [mediaFile,    setMediaFile]    = useState(null);
+  const [mediaPreview, setMediaPreview] = useState(null);
+  // Keep legacy names as aliases so existing code below still works
+  const imageFile    = form.mediaType === 'image'  ? mediaFile    : null;
+  const imagePreview = form.mediaType === 'image'  ? mediaPreview : null;
 
   const load = async () => {
     setLoading(true);
@@ -588,42 +591,45 @@ function AdminInstagramGrid() {
 
   const openNew = () => {
     setEditTarget(null);
-    setForm({ caption: '', link: '', order: String(posts.length + 1) });
-    setImageFile(null);
-    setImagePreview(null);
+    setForm({ caption: '', link: '', sort_order: String(posts.length + 1), mediaType: 'image' });
+    setMediaFile(null);
+    setMediaPreview(null);
     setShowForm(true);
   };
 
   const openEdit = (post) => {
     setEditTarget(post);
-    setForm({ caption: post.caption, link: post.link, order: String(post.sort_order || '') });
-    setImageFile(null);
-    setImagePreview(post.image);
+    setForm({ caption: post.caption, link: post.link, sort_order: String(post.sort_order || ''), mediaType: post.mediaType || 'image' });
+    setMediaFile(null);
+    setMediaPreview(post.mediaType === 'video' ? post.video : post.image);
     setShowForm(true);
   };
 
-  const handleImagePick = (e) => {
+  const handleMediaPick = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    if (mediaPreview?.startsWith('blob:')) URL.revokeObjectURL(mediaPreview);
+    setMediaFile(file);
+    setMediaPreview(URL.createObjectURL(file));
     e.target.value = '';
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!editTarget && !imageFile) {
-      alert('Please select an image.');
+    const needsFile = !editTarget && !mediaFile;
+    if (needsFile) {
+      alert('Please select an image or video.');
       return;
     }
     setSaving(true);
     try {
       const data = {
-        caption:   form.caption,
-        link:      form.link,
-        order:     Number(form.order) || 0,
-        imageFile: imageFile || undefined,
+        caption:    form.caption,
+        link:       form.link,
+        sort_order: Number(form.sort_order) || 0,
+        mediaType:  form.mediaType,
+        imageFile:  form.mediaType === 'image'  ? mediaFile : undefined,
+        videoFile:  form.mediaType === 'video'  ? mediaFile : undefined,
       };
       if (editTarget) await updateInstagramPost(editTarget.id, data);
       else             await createInstagramPost(data);
@@ -679,7 +685,15 @@ function AdminInstagramGrid() {
             {posts.map((post, idx) => (
               <div key={post.id} className="relative group">
                 <div className="relative overflow-hidden aspect-square bg-stone-100">
-                  {post.image ? (
+                  {post.mediaType === 'video' && post.video ? (
+                    <>
+                      <video src={post.video} className="object-cover w-full h-full"
+                        muted playsInline preload="metadata" />
+                      <span className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center">
+                        <Play size={10} className="text-white fill-white ml-0.5" />
+                      </span>
+                    </>
+                  ) : post.image ? (
                     <img src={post.image} alt={post.caption || `Post ${idx + 1}`}
                       className="object-cover w-full h-full" loading="lazy" />
                   ) : (
@@ -714,14 +728,14 @@ function AdminInstagramGrid() {
               <button key={`empty-${i}`} onClick={openNew}
                 className="flex flex-col items-center justify-center gap-2 transition-colors border-2 border-dashed border-stone-200 aspect-square hover:border-charcoal-700 hover:bg-stone-50 group">
                 <Plus size={18} className="transition-colors text-stone-300 group-hover:text-charcoal-700" />
-                <span className="font-body text-[10px] text-stone-300 group-hover:text-charcoal-700 transition-colors">Add photo</span>
+                <span className="font-body text-[10px] text-stone-300 group-hover:text-charcoal-700 transition-colors">Add media</span>
               </button>
             ))}
           </div>
 
           {posts.length === 0 && (
             <p className="py-6 text-xs text-center font-body text-stone-400">
-              No posts yet. Click "Add Post" or any empty slot to upload your first photo.
+              No posts yet. Click "Add Post" or any empty slot to upload a photo or video.
             </p>
           )}
         </>
@@ -733,7 +747,7 @@ function AdminInstagramGrid() {
         <div className="space-y-1 text-xs font-body text-stone-500">
           <p>Use the <strong>Order</strong> field (1–6) to control which position each photo appears in on the homepage.</p>
           <p>The <strong>Link</strong> field should be the full URL to the Instagram post (e.g. <span className="font-mono">https://instagram.com/p/abc123</span>).</p>
-          <p>Photos are displayed at 1:1 square ratio — portrait photos work best.</p>
+          <p>Media is displayed at 1:1 square ratio. Photos and videos both supported. Videos play on hover.</p>
         </div>
       </div>
 
@@ -749,29 +763,76 @@ function AdminInstagramGrid() {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
-              {/* image upload */}
+
+              {/* ── media type toggle ─── */}
               <div>
-                <label className="label-xs">Photo {!editTarget && '*'}</label>
-                {imagePreview ? (
+                <label className="label-xs">Type</label>
+                <div className="flex gap-2 mt-1">
+                  {[['image', 'Photo'], ['video', 'Video']].map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => {
+                        if (mediaPreview?.startsWith('blob:')) URL.revokeObjectURL(mediaPreview);
+                        setMediaFile(null);
+                        setMediaPreview(null);
+                        setForm(f => ({ ...f, mediaType: val }));
+                      }}
+                      className={`flex-1 py-2 font-body text-xs tracking-wider uppercase border transition-colors ${
+                        form.mediaType === val
+                          ? 'bg-charcoal-900 text-white border-charcoal-900'
+                          : 'border-stone-200 text-stone-500 hover:border-charcoal-700'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── file upload ─── */}
+              <div>
+                <label className="label-xs">
+                  {form.mediaType === 'video' ? 'Video' : 'Photo'} {!editTarget && '*'}
+                </label>
+
+                {mediaPreview ? (
                   <div className="relative mt-1 group aspect-square max-w-[200px]">
-                    <img src={imagePreview} alt="Preview"
-                      className="object-cover w-full h-full border border-stone-200" />
+                    {form.mediaType === 'video' ? (
+                      <video src={mediaPreview} className="object-cover w-full h-full border border-stone-200"
+                        muted loop playsInline autoPlay />
+                    ) : (
+                      <img src={mediaPreview} alt="Preview"
+                        className="object-cover w-full h-full border border-stone-200" />
+                    )}
                     <button type="button"
-                      onClick={() => { if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview); setImageFile(null); setImagePreview(null); }}
+                      onClick={() => {
+                        if (mediaPreview?.startsWith('blob:')) URL.revokeObjectURL(mediaPreview);
+                        setMediaFile(null);
+                        setMediaPreview(null);
+                      }}
                       className="absolute top-1.5 right-1.5 w-6 h-6 bg-charcoal-900 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <X size={11} />
                     </button>
                     <label className="absolute bottom-0 left-0 right-0 py-1.5 text-center cursor-pointer bg-charcoal-900/70 font-body text-[10px] text-white hover:bg-charcoal-900 transition-colors">
-                      Change photo
-                      <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImagePick} />
+                      Change {form.mediaType === 'video' ? 'video' : 'photo'}
+                      <input type="file"
+                        accept={form.mediaType === 'video' ? 'video/mp4,video/webm,video/ogg' : 'image/jpeg,image/png,image/webp'}
+                        className="hidden" onChange={handleMediaPick} />
                     </label>
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center gap-2 py-8 mt-1 transition-colors border-2 border-dashed cursor-pointer border-stone-300 hover:border-charcoal-700 hover:bg-stone-50">
                     <Upload size={20} className="text-stone-400" />
-                    <span className="text-xs font-body text-stone-400">Click to upload photo</span>
-                    <span className="font-body text-[10px] text-stone-300">JPG, PNG, WEBP · square crops best</span>
-                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImagePick} />
+                    <span className="text-xs font-body text-stone-400">
+                      Click to upload {form.mediaType === 'video' ? 'video' : 'photo'}
+                    </span>
+                    <span className="font-body text-[10px] text-stone-300">
+                      {form.mediaType === 'video' ? 'MP4, WebM · max 50MB' : 'JPG, PNG, WEBP · square crops best'}
+                    </span>
+                    <input type="file"
+                      accept={form.mediaType === 'video' ? 'video/mp4,video/webm,video/ogg' : 'image/jpeg,image/png,image/webp'}
+                      className="hidden" onChange={handleMediaPick} />
                   </label>
                 )}
               </div>

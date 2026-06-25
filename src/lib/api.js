@@ -258,13 +258,18 @@ export async function subscribeNewsletter(email) {
 
 export async function getInstagramPosts() {
   try {
-    const records = await pb.collection('instagram_grid').getList(1, 6, { sort: '+created', requestKey: null });
+    // requestKey: null disables auto-cancellation during StrictMode double-mount.
+    const records = await pb.collection('instagram_grid').getList(1, 6, {
+      requestKey: null,
+    });
     return (records.items || []).map(r => ({
-      id:      r.id,
-      image:   r.image ? pb.files.getUrl(r, r.image) : null,
-      caption: r.caption || '',
-      link:    r.link    || '',
-      order:   r.sort_order || r.order || 0,
+      id:        r.id,
+      mediaType: r.media_type || 'image',           // 'image' | 'video'
+      image:     r.image ? pb.files.getUrl(r, r.image) : null,
+      video:     r.video ? pb.files.getUrl(r, r.video) : null,
+      caption:   r.caption || '',
+      link:      r.link    || '',
+      sort_order: r.sort_order || 0,
     }));
   } catch (err) {
     console.warn('getInstagramPosts failed:', err.message);
@@ -274,24 +279,29 @@ export async function getInstagramPosts() {
 
 export async function createInstagramPost(data) {
   const fd = new FormData();
-  // caption is plain text — always safe to send empty string
-  fd.append('caption', data.caption || '');
-  // link is a URL field — PocketBase rejects empty string, omit if blank
+  fd.append('caption',    data.caption   || '');
+  fd.append('media_type', data.mediaType || 'image');
   if (data.link && data.link.trim()) fd.append('link', data.link.trim());
-  // order must be a number string, not empty
-  if (data.order) fd.append('sort_order', String(Number(data.order)));
-  if (data.imageFile) fd.append('image', data.imageFile);
+  if (data.sort_order) fd.append('sort_order', String(Number(data.sort_order)));
+  if (data.mediaType === 'video' && data.videoFile) {
+    fd.append('video', data.videoFile);
+  } else if (data.imageFile) {
+    fd.append('image', data.imageFile);
+  }
   return pb.collection('instagram_grid').create(fd);
 }
 
 export async function updateInstagramPost(id, data) {
   const fd = new FormData();
-  fd.append('caption', data.caption || '');
-  // To CLEAR a URL field in PocketBase send an empty string explicitly;
-  // to SET it, send the trimmed value. Both are intentional here.
+  fd.append('caption',    data.caption   || '');
+  fd.append('media_type', data.mediaType || 'image');
   fd.append('link', data.link ? data.link.trim() : '');
-  if (data.order) fd.append('sort_order', String(Number(data.order)));
-  if (data.imageFile) fd.append('image', data.imageFile);
+  if (data.sort_order) fd.append('sort_order', String(Number(data.sort_order)));
+  if (data.mediaType === 'video' && data.videoFile) {
+    fd.append('video', data.videoFile);
+  } else if (data.imageFile) {
+    fd.append('image', data.imageFile);
+  }
   return pb.collection('instagram_grid').update(id, fd);
 }
 

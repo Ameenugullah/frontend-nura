@@ -1,0 +1,16 @@
+# railway.toml — Frontend (React + Vite) service configuration
+# Place this file in the root of your frontend project folder.
+
+[build]
+builder    = "nixpacks"
+buildCommand = "npm ci && npm run build"
+
+[deploy]
+startCommand  = "npx serve dist -s -l 3000"
+restartPolicyType = "on_failure"
+
+[[services]]
+name = "frontend"
+
+[services.variables]
+PORT = "3000"

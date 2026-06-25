@@ -310,7 +310,7 @@ export default function Home() {
         <div className="px-6 mx-auto text-center max-w-7xl">
           <p className="font-body text-xs tracking-[0.25em] uppercase text-stone-400 mb-3">Follow Us</p>
           <a
-            href="https://instagram.com/nurabaharnigeria"
+            href="https://www.instagram.com/nura_bahar.ng/?__pwa=1"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block mb-8 text-3xl italic font-light transition-colors font-display text-charcoal-800 hover:text-blush-500"
