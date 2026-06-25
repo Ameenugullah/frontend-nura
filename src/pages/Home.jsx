@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Truck, RotateCcw, Lock, Star, Sparkles } from 'lucide-react';
 import { getProducts } from '../lib/api';
@@ -288,7 +288,8 @@ export default function Home() {
             <Sparkles size={14} className="text-gold-400" />
           </div>
           <h2 className="mb-12 text-3xl italic font-light font-display md:text-4xl text-stone-50">Loved Across Nigeria</h2>
-          <div className="grid gap-6 sm:grid-cols-3">
+          {/* Desktop: 3-column grid */}
+          <div className="hidden gap-6 sm:grid sm:grid-cols-3">
             {testimonials.map(t => (
               <div key={t.name} className="p-6 text-left glass animate-on-scroll">
                 <div className="flex mb-3">
@@ -299,6 +300,8 @@ export default function Home() {
               </div>
             ))}
           </div>
+          {/* Mobile: swipe carousel */}
+          <TestimonialCarousel testimonials={testimonials} />
         </div>
       </section>
 
@@ -318,6 +321,66 @@ export default function Home() {
         </div>
       </section>
 
+    </div>
+  );
+}
+
+// ── TestimonialCarousel (mobile only) ────────────────────────────────────────
+function TestimonialCarousel({ testimonials }) {
+  const [idx, setIdx] = useState(0);
+  const startX = useRef(null);
+
+  const goTo = useCallback((i) => {
+    setIdx(Math.max(0, Math.min(testimonials.length - 1, i)));
+  }, [testimonials.length]);
+
+  const onTouchStart = (e) => { startX.current = e.touches[0].clientX; };
+  const onTouchEnd   = (e) => {
+    if (startX.current === null) return;
+    const diff = startX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) goTo(idx + (diff > 0 ? 1 : -1));
+    startX.current = null;
+  };
+
+  return (
+    <div className="sm:hidden">
+      <div
+        className="overflow-hidden"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <div
+          className="flex transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(-${idx * 100}%)` }}
+        >
+          {testimonials.map(t => (
+            <div key={t.name} className="min-w-full px-1">
+              <div className="p-6 text-left glass">
+                <div className="flex mb-3">
+                  {[1,2,3,4,5].map(s => (
+                    <span key={s} className={'text-sm ' + (s <= t.stars ? 'text-amber-400' : 'text-stone-700')}>★</span>
+                  ))}
+                </div>
+                <p className="mb-4 text-sm italic leading-relaxed font-body text-stone-300">"{t.quote}"</p>
+                <p className="text-xs font-medium font-body text-blush-400">{t.name} · {t.location}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Dot indicators */}
+      <div className="flex justify-center gap-1.5 mt-4">
+        {testimonials.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            aria-label={`Testimonial ${i + 1}`}
+            className={`transition-all duration-200 rounded-full ${
+              i === idx ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }

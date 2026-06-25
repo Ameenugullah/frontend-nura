@@ -253,6 +253,52 @@ export async function subscribeNewsletter(email) {
   }
 }
 
+
+// ── INSTAGRAM GRID ────────────────────────────────────────────────────────────
+
+export async function getInstagramPosts() {
+  try {
+    const records = await pb.collection('instagram_grid').getList(1, 6, { sort: '+created', requestKey: null });
+    return (records.items || []).map(r => ({
+      id:      r.id,
+      image:   r.image ? pb.files.getUrl(r, r.image) : null,
+      caption: r.caption || '',
+      link:    r.link    || '',
+      order:   r.sort_order || r.order || 0,
+    }));
+  } catch (err) {
+    console.warn('getInstagramPosts failed:', err.message);
+    return [];
+  }
+}
+
+export async function createInstagramPost(data) {
+  const fd = new FormData();
+  // caption is plain text — always safe to send empty string
+  fd.append('caption', data.caption || '');
+  // link is a URL field — PocketBase rejects empty string, omit if blank
+  if (data.link && data.link.trim()) fd.append('link', data.link.trim());
+  // order must be a number string, not empty
+  if (data.order) fd.append('sort_order', String(Number(data.order)));
+  if (data.imageFile) fd.append('image', data.imageFile);
+  return pb.collection('instagram_grid').create(fd);
+}
+
+export async function updateInstagramPost(id, data) {
+  const fd = new FormData();
+  fd.append('caption', data.caption || '');
+  // To CLEAR a URL field in PocketBase send an empty string explicitly;
+  // to SET it, send the trimmed value. Both are intentional here.
+  fd.append('link', data.link ? data.link.trim() : '');
+  if (data.order) fd.append('sort_order', String(Number(data.order)));
+  if (data.imageFile) fd.append('image', data.imageFile);
+  return pb.collection('instagram_grid').update(id, fd);
+}
+
+export async function deleteInstagramPost(id) {
+  await pb.collection('instagram_grid').delete(id);
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
 function buildProductFormData(data) {

@@ -180,8 +180,9 @@ export function AdminProvider({ children }) {
   );
 }
 
-export const useAdmin = () => {
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAdmin() {
   const ctx = useContext(AdminContext);
   if (!ctx) throw new Error('useAdmin must be inside AdminProvider');
   return ctx;
-};
+}
