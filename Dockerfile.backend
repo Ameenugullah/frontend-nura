@@ -1,0 +1,28 @@
+# ── PocketBase Backend ────────────────────────────────────────────────────────
+FROM alpine:3.19
+
+ARG PB_VERSION=0.22.5
+
+# Install dependencies
+RUN apk add --no-cache \
+    unzip \
+    ca-certificates \
+    wget
+
+# Download PocketBase
+RUN wget -q "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip" \
+    -O /tmp/pb.zip \
+    && unzip /tmp/pb.zip pocketbase -d /pb \
+    && rm /tmp/pb.zip \
+    && chmod +x /pb/pocketbase
+
+# Copy migrations and hooks
+COPY backend/pb_migrations /pb/pb_migrations
+COPY backend/pb_hooks      /pb/pb_hooks
+
+# Data volume — persist database, uploads, logs
+VOLUME /pb/pb_data
+
+EXPOSE 8090
+
+CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data"]
