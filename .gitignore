@@ -1,1 +1,10 @@
-.vercel
+# PocketBase runtime data (managed by Railway volume)
+backend/pb_data/
+backend/pb_data.bak/
+
+# Mac junk
+.DS_Store
+
+# Zip files
+*.zip
+pb_run.log
