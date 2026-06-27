@@ -8,3 +8,4 @@ backend/pb_data.bak/
 # Zip files
 *.zip
 pb_run.log
+node_modules/

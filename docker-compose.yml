@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+
+  # ── PocketBase backend ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: nurabahar_backend
+    restart: unless-stopped
+    volumes:
+      - pb_data:/pb/pb_data
+    ports:
+      - "8090:8090"           # expose PB for local testing
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app_net
+
+  # ── Frontend (nginx serving Vite build) ────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: nurabahar_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app_net
+    volumes:
+      - ./docker/ssl:/etc/nginx/ssl:ro   # mount SSL certs for HTTPS
+
+  # ── Optional: Nginx reverse proxy (for custom domain) ──────────────────────
+  # Uncomment to use a dedicated reverse proxy with Certbot/Let's Encrypt
+  # proxy:
+  #   image: nginx:1.25-alpine
+  #   container_name: nurabahar_proxy
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./docker/proxy.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - certbot_data:/var/www/certbot
+  #     - certbot_ssl:/etc/letsencrypt
+  #   depends_on:
+  #     - frontend
+  #     - backend
+  #   networks:
+  #     - app_net
+
+volumes:
+  pb_data:
+    driver: local
+
+networks:
+  app_net:
+    driver: bridge
