@@ -17,4 +17,4 @@ COPY pb_migrations/ ./pb_migrations/
 COPY pb_hooks/     ./pb_hooks/
 COPY pb_data/      ./pb_data/
 
-CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data", "--migrationsDir=/pb/pb_migrations", "--hooksDir=/pb/pb_hooks"]
+CMD /pb/pocketbase serve --http="0.0.0.0:${PORT:-8090}" --dir=/pb/pb_data --migrationsDir=/pb/pb_migrations --hooksDir=/pb/pb_hooks
