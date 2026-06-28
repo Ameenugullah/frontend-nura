@@ -1,6 +1,4 @@
 # PocketBase runtime data (managed by Railway volume)
-backend/pb_data/
-backend/pb_data.bak/
 
 # Mac junk
 .DS_Store
@@ -10,6 +8,3 @@ backend/pb_data.bak/
 pb_run.log
 node_modules/
 frontend/.env
-backend/pb_data.bak/ git add .gitignore
-backend/pb_data/
-backend/pb_data.bak/
