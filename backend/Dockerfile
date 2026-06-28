@@ -30,7 +30,6 @@ COPY pb_hooks/     ./pb_hooks/
 # pb_data is where PocketBase stores its database and uploaded files.
 # On Railway, mount a persistent volume to /pb/pb_data so data survives
 # redeploys. Without a volume, data resets on every deploy.
-VOLUME /pb/pb_data
 
 # Railway sets $PORT at runtime — PocketBase must listen on 0.0.0.0:$PORT
 # The shell form of CMD lets us expand $PORT correctly.
