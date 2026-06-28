@@ -1,15 +1,8 @@
 [build]
-builder = "nixpacks"
-
-[build.nixpacksPlan.phases.setup]
-nixPkgs = ["wget", "unzip"]
-
-[build.nixpacksPlan.phases.install]
-cmds = [
-  "wget https://github.com/pocketbase/pocketbase/releases/download/v0.22.0/pocketbase_0.22.0_linux_amd64.zip",
-  "unzip pocketbase_0.22.0_linux_amd64.zip",
-  "chmod +x pocketbase"
-]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "./pocketbase serve --http=0.0.0.0:$PORT --dir=./pb_data"
+startCommand = "./pocketbase serve --http=0.0.0.0:$PORT --dir=./pb_data --migrationsDir=./pb_migrations --hooksDir=./pb_hooks"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
