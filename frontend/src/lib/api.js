@@ -87,7 +87,6 @@ export async function getProducts(category, gender) {
     const params = new URLSearchParams();
     if (filters.length) params.set('filter', filters.join(' && '));
     params.set('perPage', '200');
-    params.set('sort', '-created');
 
     const url = pb.baseUrl + '/api/collections/products/records?' + params.toString();
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
@@ -184,7 +183,6 @@ export async function getOrders(status) {
     const params = new URLSearchParams();
     if (status) params.set('filter', 'status = "' + status + '"');
     params.set('perPage', '200');
-    params.set('sort', '-created');
 
     const headers = { 'Content-Type': 'application/json' };
     if (pb.authStore.token) headers['Authorization'] = 'Bearer ' + pb.authStore.token;
