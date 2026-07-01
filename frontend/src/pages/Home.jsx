@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Truck, RotateCcw, Lock, Star, Sparkles } from 'lucide-react';
 import { getProducts } from '../lib/api';
@@ -11,28 +11,28 @@ import InstagramGrid from '../components/InstagramGrid';
 
 const heroSlides = [
   {
-    image: '/images/IMG.png',
+    image:    '/images/IMG.png',
     fallback: '/images/placeholder-product.svg',
-    tag:     'New Collection — 2026',
-    heading: 'MEGA\nCOLLECTION',
-    sub:     'New Arrivals Summer 2026',
-    cta:     'Shop Now',
+    tag:      'New Collection — 2026',
+    heading:  'MEGA\nCOLLECTION',
+    sub:      'New Arrivals Summer 2026',
+    cta:      'Shop Now',
   },
   {
-    image: '/images/IMG_1753.jpeg',
+    image:    '/images/IMG_1753.jpeg',
     fallback: '/images/placeholder-product.svg',
-    tag:     'Nura Bahar Nigeria',
-    heading: 'WEAR YOUR\nHERITAGE',
-    sub:     'From Kano to the world — with love.',
-    cta:     'Explore Now',
+    tag:      'Nura Bahar Nigeria',
+    heading:  'WEAR YOUR\nHERITAGE',
+    sub:      'From Kano to the world — with love.',
+    cta:      'Explore Now',
   },
 ];
 
 const perks = [
-  { icon: Truck,     label: 'Free Shipping & Returns',  sub: 'On orders over ₦500,000' },
-  { icon: Lock,      label: 'Money Back Guarantee',     sub: 'Within 7 days' },
-  { icon: Star,      label: 'Online Support 24/7',      sub: 'We reply on WhatsApp' },
-  { icon: RotateCcw, label: 'Secure Payment',           sub: 'Paystack & bank transfer' },
+  { icon: Truck,     label: 'Free Shipping & Returns', sub: 'On orders over ₦500,000' },
+  { icon: Lock,      label: 'Money Back Guarantee',    sub: 'Within 7 days' },
+  { icon: Star,      label: 'Online Support 24/7',     sub: 'We reply on WhatsApp' },
+  { icon: RotateCcw, label: 'Secure Payment',          sub: 'Paystack & bank transfer' },
 ];
 
 const categoryBannersMeta = [
@@ -61,30 +61,31 @@ function useScrollReveal() {
   return ref;
 }
 
+// Fetch products ONCE for the entire page — shared by all sections
 function useAllProducts() {
   const [products, setProducts] = useState([]);
   useEffect(() => {
     let mounted = true;
     getProducts().then(items => {
-      if (!mounted) return;
-      setProducts(items || []);
+      if (mounted) setProducts(items || []);
     }).catch(() => {
-      if (!mounted) return;
-      setProducts([]);
+      if (mounted) setProducts([]);
     });
     return () => { mounted = false; };
   }, []);
 
-  const bannerImages = {
+  const bannerImages = useMemo(() => ({
     women:     products.find(p => matchesGender(p, 'women'))?.images?.[0]  || null,
     men:       products.find(p => matchesGender(p, 'men'))?.images?.[0]    || null,
     fragrance: products.find(p => isFragrance(p))?.images?.[0]            || null,
-  };
+  }), [products]);
 
-  const featuredImages = products
-    .filter(p => p.featured && p.images?.[0])
-    .slice(0, 2)
-    .map(p => p.images[0]);
+  const featuredImages = useMemo(() =>
+    products
+      .filter(p => p.featured && p.images?.[0])
+      .slice(0, 2)
+      .map(p => p.images[0]),
+  [products]);
 
   return { products, bannerImages, featuredImages };
 }
@@ -93,8 +94,8 @@ export default function Home() {
   const [heroIdx, setHeroIdx] = useState(0);
   const [atStart, setAtStart] = useState(true);
   const [atEnd,   setAtEnd]   = useState(false);
-  const revealRef  = useScrollReveal();
-  const scrollRef  = useRef(null);
+  const revealRef = useScrollReveal();
+  const scrollRef = useRef(null);
   const { products: allProducts, bannerImages, featuredImages } = useAllProducts();
   const slide = heroSlides[heroIdx];
 
@@ -128,10 +129,12 @@ export default function Home() {
   return (
     <div ref={revealRef}>
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <section className="relative h-screen min-h-[560px] max-h-[900px] overflow-hidden">
         <div className="absolute inset-0">
-          <img src={slide.image} alt="Hero"
+          <img
+            src={slide.image}
+            alt="Hero"
             className="object-cover w-full h-full transition-opacity duration-1000"
             onError={e => { e.target.onerror = null; e.target.src = slide.fallback; }}
           />
@@ -155,7 +158,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Perks bar ── */}
+      {/* Perks bar */}
       <section className="py-5 bg-white border-y border-stone-200">
         <div className="px-6 mx-auto max-w-7xl">
           <div className="flex flex-col items-center justify-between gap-4 divide-y sm:flex-row sm:divide-y-0 sm:divide-x divide-stone-100">
@@ -172,7 +175,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Category banners ── */}
+      {/* Category banners */}
       <section className="px-6 py-8 mx-auto max-w-7xl animate-on-scroll">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {categoryBannersMeta.map((cat) => {
@@ -201,8 +204,8 @@ export default function Home() {
 
       <Ticker />
 
-      {/* ── New Season ── */}
-      <section className="px-6 py-20">
+      {/* New Season — reduced py-20 → py-10 to close the gap with New Arrivals */}
+      <section className="px-6 py-10">
         <div className="mx-auto max-w-7xl">
           <div className="grid md:grid-cols-2 gap-0 items-stretch min-h-[480px]">
             <div className="relative animate-on-scroll">
@@ -219,19 +222,19 @@ export default function Home() {
                 </div>
                 <div className="grid h-full grid-cols-2 gap-2">
                   {featuredImages[0] ? (
-                    <img src={featuredImages[0]} alt="Featured product" className="object-cover w-full h-full col-span-1" loading="lazy" />
+                    <img src={featuredImages[0]} alt="Featured" className="object-cover w-full h-full col-span-1" loading="lazy" />
                   ) : (
                     <div className="w-full h-full col-span-1 bg-stone-200 animate-pulse" />
                   )}
                   {featuredImages[1] ? (
-                    <img src={featuredImages[1]} alt="Featured product" className="object-cover w-full h-full col-span-1" loading="lazy" />
+                    <img src={featuredImages[1]} alt="Featured" className="object-cover w-full h-full col-span-1" loading="lazy" />
                   ) : (
                     <div className="w-full h-full col-span-1 bg-stone-300 animate-pulse" />
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex flex-col justify-center px-10 animate-on-scroll bg-stone-100 py-14 md:pl-14">
+            <div className="flex flex-col justify-center px-10 py-12 animate-on-scroll bg-stone-100 md:pl-14">
               <span className="block mb-4 tag">New Season</span>
               <h2 className="mb-6 text-4xl italic font-light leading-tight font-display sm:text-5xl text-charcoal-800">New Season<br />Collection</h2>
               <div className="w-10 h-px mb-6 bg-blush-500" />
@@ -244,10 +247,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── New Arrivals carousel ── */}
-      <section className="py-16 bg-stone-50">
+      {/* New Arrivals — reduced py-16 → py-10 */}
+      <section className="py-10 bg-stone-50">
         <div className="px-6 mx-auto max-w-7xl">
-          <div className="mb-10 text-center animate-on-scroll">
+          <div className="mb-8 text-center animate-on-scroll">
             <span className="block mb-2 tag-dark">New Items Added Every Week</span>
             <h2 className="text-4xl italic font-light font-display sm:text-5xl text-charcoal-800">New Arrivals</h2>
           </div>
@@ -261,7 +264,7 @@ export default function Home() {
         textClass="text-white/50"
       />
 
-      {/* ── Women's Picks ── */}
+      {/* Women's Picks */}
       <section className="py-16 bg-white">
         <div className="px-6 mx-auto max-w-7xl">
           <div className="mb-10 text-center animate-on-scroll">
@@ -276,10 +279,9 @@ export default function Home() {
       </section>
 
       <MensCollection allProducts={allProducts} />
-
       <FragrancesCollection allProducts={allProducts} />
 
-      {/* ── Testimonials ── */}
+      {/* Testimonials */}
       <section className="py-16 bg-charcoal-900">
         <div className="max-w-5xl px-6 mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
@@ -288,7 +290,6 @@ export default function Home() {
             <Sparkles size={14} className="text-gold-400" />
           </div>
           <h2 className="mb-12 text-3xl italic font-light font-display md:text-4xl text-stone-50">Loved Across Nigeria</h2>
-          {/* Desktop: 3-column grid */}
           <div className="hidden gap-6 sm:grid sm:grid-cols-3">
             {testimonials.map(t => (
               <div key={t.name} className="p-6 text-left glass animate-on-scroll">
@@ -300,12 +301,11 @@ export default function Home() {
               </div>
             ))}
           </div>
-          {/* Mobile: swipe carousel */}
           <TestimonialCarousel testimonials={testimonials} />
         </div>
       </section>
 
-      {/* ── Instagram / Follow Us ── */}
+      {/* Instagram */}
       <section className="bg-white py-14">
         <div className="px-6 mx-auto text-center max-w-7xl">
           <p className="font-body text-xs tracking-[0.25em] uppercase text-stone-400 mb-3">Follow Us</p>
@@ -320,38 +320,52 @@ export default function Home() {
           <InstagramGrid />
         </div>
       </section>
-
     </div>
   );
 }
 
-// ── TestimonialCarousel (mobile only) ────────────────────────────────────────
+// ── TestimonialCarousel — fixed: auto-slide + infinite loop ──────────────────
 function TestimonialCarousel({ testimonials }) {
-  const [idx, setIdx] = useState(0);
-  const startX = useRef(null);
+  const [idx, setIdx]       = useState(0);
+  const startX  = useRef(null);
+  const timerRef = useRef(null);
+  const count   = testimonials.length;
 
   const goTo = useCallback((i) => {
-    setIdx(Math.max(0, Math.min(testimonials.length - 1, i)));
-  }, [testimonials.length]);
+    setIdx(((i % count) + count) % count);
+  }, [count]);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setIdx(prev => (prev + 1) % count);
+    }, 4000);
+    return () => clearInterval(timerRef.current);
+  }, [count]);
+
+  const resetTimer = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setIdx(prev => (prev + 1) % count);
+    }, 4000);
+  };
 
   const onTouchStart = (e) => { startX.current = e.touches[0].clientX; };
   const onTouchEnd   = (e) => {
     if (startX.current === null) return;
     const diff = startX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) goTo(idx + (diff > 0 ? 1 : -1));
+    if (Math.abs(diff) > 40) { goTo(idx + (diff > 0 ? 1 : -1)); resetTimer(); }
     startX.current = null;
   };
 
   return (
     <div className="sm:hidden">
-      <div
-        className="overflow-hidden"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
+      <div className="overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div
-          className="flex transition-transform duration-300 ease-out"
-          style={{ transform: `translateX(-${idx * 100}%)` }}
+          className="flex will-change-transform"
+          style={{
+            transform:  `translateX(-${idx * 100}%)`,
+            transition: 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)',
+          }}
         >
           {testimonials.map(t => (
             <div key={t.name} className="min-w-full px-1">
@@ -368,12 +382,11 @@ function TestimonialCarousel({ testimonials }) {
           ))}
         </div>
       </div>
-      {/* Dot indicators */}
       <div className="flex justify-center gap-1.5 mt-4">
         {testimonials.map((_, i) => (
           <button
             key={i}
-            onClick={() => goTo(i)}
+            onClick={() => { goTo(i); resetTimer(); }}
             aria-label={`Testimonial ${i + 1}`}
             className={`transition-all duration-200 rounded-full ${
               i === idx ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30'
@@ -385,25 +398,21 @@ function TestimonialCarousel({ testimonials }) {
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
 function FeaturedTabCarousel({ allProducts }) {
   const [tab, setTab] = useState('women');
   const scrollRef = useRef(null);
 
-  const products = tab === 'fragrance'
-    ? allProducts.filter(isFragrance)
-    : allProducts.filter(p => matchesGender(p, tab));
+  const products = useMemo(() =>
+    tab === 'fragrance'
+      ? allProducts.filter(isFragrance)
+      : allProducts.filter(p => matchesGender(p, tab)),
+  [tab, allProducts]);
 
   const scroll = (dir) => {
     const el = scrollRef.current;
     if (!el) return;
-    const card = el.firstElementChild;
-    el.scrollBy({ left: dir * ((card?.offsetWidth ?? 280) + 20), behavior: 'smooth' });
+    el.scrollBy({ left: dir * ((el.firstElementChild?.offsetWidth ?? 280) + 20), behavior: 'smooth' });
   };
-
-  const tabLink = `/products?section=${tab}`;
-  const emptyLabel = tab === 'fragrance' ? 'fragrance' : tab;
 
   return (
     <>
@@ -425,10 +434,8 @@ function FeaturedTabCarousel({ allProducts }) {
 
       {products.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="mb-3 text-xs font-body text-stone-400">No {emptyLabel} products yet.</p>
-          <Link to={tabLink} className="text-xs underline transition-colors font-body text-blush-500 hover:text-blush-600 underline-offset-2">
-            Browse {emptyLabel === 'fragrance' ? 'Fragrance' : emptyLabel}
-          </Link>
+          <p className="mb-3 text-xs font-body text-stone-400">No {tab} products yet.</p>
+          <Link to={`/products?section=${tab}`} className="text-xs underline transition-colors font-body text-blush-500 hover:text-blush-600 underline-offset-2">Browse {tab}</Link>
         </div>
       ) : (
         <div ref={scrollRef} className="flex gap-5 pb-2 overflow-x-auto no-scrollbar" style={{ scrollSnapType: 'x mandatory' }}>
@@ -444,7 +451,7 @@ function FeaturedTabCarousel({ allProducts }) {
 }
 
 function WomensCarousel({ allProducts, scrollRef, atStart, atEnd, onScroll }) {
-  const women = allProducts.filter(p => matchesGender(p, 'women'));
+  const women = useMemo(() => allProducts.filter(p => matchesGender(p, 'women')), [allProducts]);
 
   return (
     <>

@@ -1,7 +1,12 @@
 import pb from './pocketbase';
 import { normalize } from './categories';
 
-// ── HEALTH ───────────────────────────────────────────────────────────────────
+// ── In-memory cache for products (avoids repeated fetches on the same page) ──
+let _productsCache    = null;
+let _productsCacheTs  = 0;
+const CACHE_TTL_MS    = 60_000; // 1 minute
+
+// ── HEALTH ────────────────────────────────────────────────────────────────────
 export async function checkPBHealth() {
   try {
     const res = await fetch(`${pb.baseUrl}/api/health`, {
@@ -13,13 +18,10 @@ export async function checkPBHealth() {
   }
 }
 
-// ── AUTH (customer) ──────────────────────────────────────────────────────────
+// ── AUTH (customer) ───────────────────────────────────────────────────────────
 export async function signUp(email, password, name) {
   const record = await pb.collection('users').create({
-    email,
-    password,
-    passwordConfirm: password,
-    name,
+    email, password, passwordConfirm: password, name,
   });
   await pb.collection('users').authWithPassword(email, password);
   return record;
@@ -45,7 +47,7 @@ export async function confirmPasswordReset(token, password) {
   await pb.collection('users').confirmPasswordReset(token, password, password);
 }
 
-// ── ADMIN AUTH ────────────────────────────────────────────────────────────────
+// ── ADMIN AUTH ─────────────────────────────────────────────────────────────────
 export async function adminLogin(email, password) {
   try {
     await pb.collection('_superusers').authWithPassword(email, password);
@@ -64,20 +66,18 @@ export function isAdminLoggedIn() {
 }
 
 // ── PRODUCTS ──────────────────────────────────────────────────────────────────
-//
-// getProducts() fetches the FULL product list and lets the caller filter
-// client-side (see Products.jsx). This used to be fine, but to also support
-// fast server-side filtered fetches (e.g. for a paginated future), we still
-// accept optional category/gender args and build a PocketBase filter string,
-// fully normalized (trimmed + lower-cased) so "Fragrance" === "fragrance".
-//
 export async function getProducts(category, gender) {
+  // Return cached result if fresh (and no specific filter is requested)
+  const noFilter = (!category || normalize(category) === 'all') &&
+                   (!gender   || normalize(gender)   === 'all');
+
+  if (noFilter && _productsCache && Date.now() - _productsCacheTs < CACHE_TTL_MS) {
+    return _productsCache;
+  }
+
   try {
     const filters = [];
     if (category && normalize(category) !== 'all') {
-      // PocketBase filter syntax doesn't support LOWER() out of the box on
-      // all deployments, so we filter case-sensitively here and let the
-      // client-side useMemo in Products.jsx do the normalized re-filter.
       filters.push('category = "' + category.replace(/"/g, '\\"') + '"');
     }
     if (gender && normalize(gender) !== 'all') {
@@ -85,18 +85,32 @@ export async function getProducts(category, gender) {
     }
 
     const params = new URLSearchParams();
-    if (filters.length > 0) params.set('filter', filters.join(' && '));
-    params.set('perPage', '200'); // generous cap; raise if catalog grows
+    if (filters.length) params.set('filter', filters.join(' && '));
+    params.set('perPage', '200');
+    params.set('sort', '-created');
 
-    const url = pb.baseUrl + '/api/collections/products/records' + (params.toString() ? '?' + params.toString() : '');
+    const url = pb.baseUrl + '/api/collections/products/records?' + params.toString();
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    return (data.items || []).map(normalizeProduct);
+    const items = (data.items || []).map(normalizeProduct);
+
+    if (noFilter) {
+      _productsCache   = items;
+      _productsCacheTs = Date.now();
+    }
+
+    return items;
   } catch (err) {
     console.warn('getProducts failed:', err.message);
     return [];
   }
+}
+
+// Invalidate cache after create/update/delete
+export function invalidateProductsCache() {
+  _productsCache   = null;
+  _productsCacheTs = 0;
 }
 
 export async function getProductById(id) {
@@ -104,8 +118,7 @@ export async function getProductById(id) {
     const url = pb.baseUrl + '/api/collections/products/records/' + id;
     const res = await fetch(url);
     if (!res.ok) return null;
-    const record = await res.json();
-    return normalizeProduct(record);
+    return normalizeProduct(await res.json());
   } catch {
     return null;
   }
@@ -116,58 +129,52 @@ export async function createProduct(data) {
     const formData = buildProductFormData(data);
     formData.append('rating', data.rating ?? 5);
     const record = await pb.collection('products').create(formData);
+    invalidateProductsCache();
     return normalizeProduct(record);
   } catch (err) {
     let details = '';
-    try {
-      if (err?.data) details = JSON.stringify(err.data);
-      else if (err?.response?.data) details = JSON.stringify(err.response.data);
-      else details = String(err);
-    } catch {
-      details = String(err);
-    }
-    console.error('createProduct error:', err, details);
-    throw new Error('Failed to create product: ' + (details || err.message || String(err)));
+    try { details = err?.data ? JSON.stringify(err.data) : String(err); } catch { details = String(err); }
+    throw new Error('Failed to create product: ' + (details || err.message));
   }
 }
 
 export async function updateProduct(id, data) {
   const formData = buildProductFormData(data);
   const record = await pb.collection('products').update(id, formData);
+  invalidateProductsCache();
   return normalizeProduct(record);
 }
 
 export async function deleteProduct(id) {
   await pb.collection('products').delete(id);
+  invalidateProductsCache();
 }
 
 export async function updateStock(id, stock) {
   await pb.collection('products').update(id, { stock: Number(stock) });
+  invalidateProductsCache();
 }
 
 // ── ORDERS ────────────────────────────────────────────────────────────────────
-// NOTE: orders are created with status "pending" and a "paymentStatus" of
-// "unpaid". They only become "Paid"/"Completed" after server-side webhook
-// verification — see PAYMENT_ARCHITECTURE.md and pb_hooks/payments.pb.js.
 export async function createOrder(data) {
   const record = await pb.collection('orders').create({
     customerName:   data.customerName,
     email:          data.email,
-    phone:          data.phone || '',
-    address:        data.address,
-    city:           data.city,
-    state:          data.state || '',
-    country:        data.country || 'NG',
+    phone:          data.phone          || '',
+    address:        data.deliveryMethod === 'pickup' ? 'STORE PICKUP' : (data.address || ''),
+    city:           data.deliveryMethod === 'pickup' ? 'Kano (Store)' : (data.city || ''),
+    state:          data.state          || '',
+    country:        data.country        || 'NG',
     items:          JSON.stringify(data.items),
     subtotal:       data.subtotal,
     shipping:       data.shipping,
-    tax:            data.tax || 0,
+    tax:            data.tax            || 0,
     total:          data.total,
-    paymentMethod:  data.paymentMethod || 'online',
-    paymentRef:     data.paymentRef || '',     // Paystack reference, set before redirect
-    paymentStatus:  'unpaid',                  // unpaid | verifying | paid | failed
-    status:         'pending',                 // pending | processing | paid | failed | cancelled | refunded
-    notes:          data.notes || '',
+    paymentMethod:  data.paymentMethod  || 'online',
+    paymentRef:     data.paymentRef     || '',
+    paymentStatus:  'unpaid',
+    status:         'pending',
+    notes:          data.notes          || '',
   });
   return record;
 }
@@ -177,11 +184,12 @@ export async function getOrders(status) {
     const params = new URLSearchParams();
     if (status) params.set('filter', 'status = "' + status + '"');
     params.set('perPage', '200');
+    params.set('sort', '-created');
 
     const headers = { 'Content-Type': 'application/json' };
     if (pb.authStore.token) headers['Authorization'] = 'Bearer ' + pb.authStore.token;
 
-    const url = pb.baseUrl + '/api/collections/orders/records' + (params.toString() ? '?' + params.toString() : '');
+    const url = pb.baseUrl + '/api/collections/orders/records?' + params.toString();
     const res = await fetch(url, { headers });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
@@ -198,8 +206,7 @@ export async function getOrderById(id) {
   const url = pb.baseUrl + '/api/collections/orders/records/' + id;
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const record = await res.json();
-  return normalizeOrder(record);
+  return normalizeOrder(await res.json());
 }
 
 export async function updateOrderStatus(id, status) {
@@ -210,33 +217,25 @@ export async function deleteOrder(id) {
   await pb.collection('orders').delete(id);
 }
 
-// ── PAYMENT VERIFICATION (polling) ─────────────────────────────────────────
-// After redirecting back from Paystack, the frontend polls this endpoint to
-// see whether the PocketBase server-side hook has confirmed the webhook yet.
-// The actual verification call to Paystack's /transaction/verify endpoint
-// happens server-side in pb_hooks/payments.pb.js — never trust a client-side
-// "success" callback alone.
+// ── PAYMENT POLLING ──────────────────────────────────────────────────────────
 export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeoutMs = 60000 } = {}) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const order = await getOrderById(orderId);
-      if (order.paymentStatus === 'paid' || order.paymentStatus === 'failed') {
-        return order;
-      }
+      if (order.paymentStatus === 'paid' || order.paymentStatus === 'failed') return order;
     } catch {
-      // keep polling — order may not be readable until auth catches up
+      // keep polling
     }
     await new Promise(r => setTimeout(r, intervalMs));
   }
   throw new Error('Payment verification timed out. Please contact support with your order reference.');
 }
 
-// ── USERS (admin view) ────────────────────────────────────────────────────────
+// ── USERS ─────────────────────────────────────────────────────────────────────
 export async function getUsers() {
   try {
-    const records = await pb.collection('users').getFullList({ sort: '-created' });
-    return records;
+    return await pb.collection('users').getFullList({ sort: '-created' });
   } catch {
     return [];
   }
@@ -253,22 +252,20 @@ export async function subscribeNewsletter(email) {
   }
 }
 
-
 // ── INSTAGRAM GRID ────────────────────────────────────────────────────────────
-
 export async function getInstagramPosts() {
   try {
-    // requestKey: null disables auto-cancellation during StrictMode double-mount.
     const records = await pb.collection('instagram_grid').getList(1, 6, {
+      sort:       'sort_order',
       requestKey: null,
     });
     return (records.items || []).map(r => ({
-      id:        r.id,
-      mediaType: r.media_type || 'image',           // 'image' | 'video'
-      image:     r.image ? pb.files.getUrl(r, r.image) : null,
-      video:     r.video ? pb.files.getUrl(r, r.video) : null,
-      caption:   r.caption || '',
-      link:      r.link    || '',
+      id:         r.id,
+      mediaType:  r.media_type || 'image',
+      image:      r.image ? pb.files.getUrl(r, r.image) : null,
+      video:      r.video ? pb.files.getUrl(r, r.video) : null,
+      caption:    r.caption    || '',
+      link:       r.link       || '',
       sort_order: r.sort_order || 0,
     }));
   } catch (err) {
@@ -281,8 +278,8 @@ export async function createInstagramPost(data) {
   const fd = new FormData();
   fd.append('caption',    data.caption   || '');
   fd.append('media_type', data.mediaType || 'image');
-  if (data.link && data.link.trim()) fd.append('link', data.link.trim());
-  if (data.sort_order) fd.append('sort_order', String(Number(data.sort_order)));
+  if (data.link?.trim()) fd.append('link', data.link.trim());
+  if (data.sort_order)   fd.append('sort_order', String(Number(data.sort_order)));
   if (data.mediaType === 'video' && data.videoFile) {
     fd.append('video', data.videoFile);
   } else if (data.imageFile) {
@@ -310,33 +307,23 @@ export async function deleteInstagramPost(id) {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-
 function buildProductFormData(data) {
   const fd = new FormData();
   fd.append('name',        data.name);
   fd.append('category',    data.category);
-  // Fragrance products are gender-neutral by design and submit an explicit
-  // empty string for gender (see AdminDashboard.jsx handleSave). Only
-  // default to 'women' when gender is genuinely undefined/null — never when
-  // it's deliberately set to ''.
   fd.append('gender',      data.gender === undefined || data.gender === null ? 'women' : data.gender);
   fd.append('price',       data.price);
   fd.append('description', data.description || '');
-  fd.append('badge',       data.badge || '');
+  fd.append('badge',       data.badge       || '');
   fd.append('featured',    data.featured ? 'true' : 'false');
   fd.append('stock',       data.stock ?? 10);
   fd.append('colors',      JSON.stringify(data.colors || []));
   fd.append('sizes',       JSON.stringify(data.sizes  || []));
-  if (data.originalPrice) fd.append('originalPrice', data.originalPrice);
-  if (data.imageFiles && data.imageFiles.length > 0) {
-    data.imageFiles.forEach(function (f) { fd.append('images', f); });
-  }
+  if (data.originalPrice)  fd.append('originalPrice', data.originalPrice);
+  if (data.imageFiles?.length) data.imageFiles.forEach(f => fd.append('images', f));
   return fd;
 }
 
-// Always derive file URLs from pb.baseUrl (which itself comes from
-// VITE_PB_URL) — never hardcode a host here. This is what makes images work
-// correctly in production builds regardless of where PocketBase is deployed.
 function getImageUrl(record, filename) {
   if (!filename) return '';
   try {
@@ -351,27 +338,23 @@ function normalizeProduct(record) {
     id:            record.id,
     name:          record.name,
     category:      record.category,
-    // Don't default missing gender to 'women' — Fragrance products are
-    // intentionally gender-neutral (empty string). Defaulting here would
-    // silently re-leak them into Women's-scoped views. Anywhere that needs
-    // a gender comparison should use matchesGender()/isFragrance() from
-    // lib/categories.js, which already account for this correctly.
-    gender:        record.gender || '',
+    gender:        record.gender       || '',
     price:         Number(record.price),
     originalPrice: record.originalPrice ? Number(record.originalPrice) : null,
-    description:   record.description || '',
+    description:   record.description  || '',
     colors: typeof record.colors === 'string' ? JSON.parse(record.colors) : (record.colors || []),
     sizes:  typeof record.sizes  === 'string' ? JSON.parse(record.sizes)  : (record.sizes  || []),
-    images: (record.images || []).map(function (img) { return getImageUrl(record, img); }),
+    images: (record.images || []).map(img => getImageUrl(record, img)),
     badge:    record.badge    || null,
     featured: record.featured || false,
-    rating:   Number(record.rating) || 5,
-    stock:    Number(record.stock)  || 0,
+    rating:   Number(record.rating)    || 5,
+    stock:    Number(record.stock)     || 0,
   };
 }
 
 function normalizeOrder(record) {
-  return Object.assign({}, record, {
+  return {
+    ...record,
     items: typeof record.items === 'string' ? JSON.parse(record.items) : (record.items || []),
-  });
+  };
 }
