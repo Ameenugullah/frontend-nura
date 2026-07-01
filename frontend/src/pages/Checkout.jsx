@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MessageCircle, CreditCard, ChevronRight, Lock, CheckCircle, Truck, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createOrder } from '../lib/api';
-import { initializePaystackPayment, sendWhatsAppOrder } from '../lib/paystack';
+import {
+  initializePaystackPayment,
+  initializeMoniepointPayment,
+  sendWhatsAppOrder,
+} from '../lib/paystack';
 
 const STATES = [
   'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno','Cross River',
@@ -12,24 +16,43 @@ const STATES = [
   'Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara',
 ];
 
-const STEPS         = ['Delivery', 'Payment', 'Confirm'];
-const HOME_SHIPPING = 2500;
+const STEPS = ['Delivery', 'Payment', 'Confirm'];
+
+// ── Shipping logic ────────────────────────────────────────────────────────────
+// Store Pickup  → always ₦0
+// Kano state    → free if subtotal ≥ ₦200,000  else ₦2,500
+// Rest of Nigeria → free if subtotal ≥ ₦300,000 else ₦2,500
+const FLAT_RATE              = 2_500;
+const KANO_FREE_THRESHOLD    = 200_000;
+const NIGERIA_FREE_THRESHOLD = 300_000;
+
+function calcShipping(deliveryMethod, state, subtotal) {
+  if (deliveryMethod === 'pickup') return 0;
+  const isKano = state?.toLowerCase() === 'kano';
+  const threshold = isKano ? KANO_FREE_THRESHOLD : NIGERIA_FREE_THRESHOLD;
+  return subtotal >= threshold ? 0 : FLAT_RATE;
+}
+
+function shippingLabel(deliveryMethod, state, subtotal) {
+  if (deliveryMethod === 'pickup') return 'Store Pickup — Free';
+  const isKano    = state?.toLowerCase() === 'kano';
+  const threshold = isKano ? KANO_FREE_THRESHOLD : NIGERIA_FREE_THRESHOLD;
+  const isFree    = subtotal >= threshold;
+  if (isFree) return `Free delivery (orders ≥ ₦${threshold.toLocaleString('en-NG')})`;
+  return `₦${FLAT_RATE.toLocaleString('en-NG')} — Free over ₦${threshold.toLocaleString('en-NG')}`;
+}
 
 export default function Checkout() {
   const { cartItems, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
 
-  // Delivery method: 'home' | 'pickup'
   const [deliveryMethod, setDeliveryMethod] = useState('home');
-  const shipping = deliveryMethod === 'pickup' ? 0 : (subtotal > 30000 ? 0 : HOME_SHIPPING);
-  const total    = subtotal + shipping;
-
-  const [step,          setStep]         = useState(0);
-  const [loading,       setLoading]      = useState(false);
-  const [error,         setError]        = useState('');
-  const [orderId,       setOrderId]      = useState('');
-  const [method,        setMethod]       = useState('online'); // 'online' | 'whatsapp'
-  const [whatsappDone,  setWhatsappDone] = useState(false);
+  const [step,           setStep]           = useState(0);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState('');
+  const [orderId,        setOrderId]        = useState('');
+  const [method,         setMethod]         = useState('online');   // 'online' | 'moniepoint' | 'whatsapp'
+  const [whatsappDone,   setWhatsappDone]   = useState(false);
 
   const [form, setForm] = useState({
     customerName: '',
@@ -41,12 +64,18 @@ export default function Checkout() {
     notes: '',
   });
 
+  const shipping = useMemo(
+    () => calcShipping(deliveryMethod, form.state, subtotal),
+    [deliveryMethod, form.state, subtotal],
+  );
+  const total = subtotal + shipping;
+
   const update = (key, val) => {
     setForm(f => ({ ...f, [key]: val }));
     setError('');
   };
 
-  const validateDelivery = () => {
+  const validate = () => {
     const { customerName, email, phone, address, city } = form;
     if (!customerName.trim()) return 'Please enter your full name.';
     if (!/\S+@\S+\.\S+/.test(email)) return 'Please enter a valid email.';
@@ -59,7 +88,7 @@ export default function Checkout() {
   };
 
   const goToPayment = () => {
-    const err = validateDelivery();
+    const err = validate();
     if (err) { setError(err); return; }
     setError('');
     setStep(1);
@@ -85,7 +114,7 @@ export default function Checkout() {
         paymentMethod: method,
       });
       newOrderId = record.id;
-    } catch (err) {
+    } catch {
       setLoading(false);
       setError('Could not create your order. Please check your connection and try again.');
       return;
@@ -103,13 +132,32 @@ export default function Checkout() {
         onPopupClosed: ({ cancelled }) => {
           setLoading(false);
           if (cancelled) {
-            setError('Payment was cancelled. You can try again whenever you\'re ready.');
+            setError("Payment was cancelled. You can try again whenever you're ready.");
           } else {
             navigate(`/order/${newOrderId}/verifying`);
           }
         },
       });
+
+    } else if (method === 'moniepoint') {
+      initializeMoniepointPayment({
+        email:   form.email,
+        amount:  total,
+        orderId: newOrderId,
+        name:    form.customerName,
+        phone:   form.phone,
+        onDone: ({ cancelled }) => {
+          setLoading(false);
+          if (cancelled) {
+            setError("Payment was cancelled. You can try again whenever you're ready.");
+          } else {
+            navigate(`/order/${newOrderId}/verifying`);
+          }
+        },
+      });
+
     } else {
+      // WhatsApp
       sendWhatsAppOrder({
         customerName:   form.customerName,
         phone:          form.phone,
@@ -130,6 +178,7 @@ export default function Checkout() {
     }
   };
 
+  // ── Empty cart ──────────────────────────────────────────────────────────────
   if (!cartItems.length && step < 2) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-stone-50">
@@ -141,6 +190,7 @@ export default function Checkout() {
     );
   }
 
+  // ── WhatsApp success screen ─────────────────────────────────────────────────
   if (step === 2 && whatsappDone) {
     return (
       <div className="flex items-center justify-center min-h-screen px-6 bg-stone-50">
@@ -150,10 +200,10 @@ export default function Checkout() {
           </div>
           <h1 className="mb-3 text-4xl italic font-light font-display text-charcoal-800">Order Sent!</h1>
           <p className="mb-2 text-sm font-body text-stone-500">
-            Your order has been sent to our WhatsApp. The admin will confirm and send payment details shortly.
+            Your order has been sent to our WhatsApp. We'll confirm shortly and provide payment details.
           </p>
           {orderId && (
-            <p className="mb-6 text-xs font-body text-stone-400">
+            <p className="mb-8 text-xs font-body text-stone-400">
               Order ref: <span className="font-semibold text-charcoal-800">NB-{orderId.slice(-6)}</span>
             </p>
           )}
@@ -166,9 +216,12 @@ export default function Checkout() {
     );
   }
 
+  // ── Main checkout ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen pt-6 bg-stone-50">
       <div className="max-w-6xl px-6 pb-20 mx-auto">
+
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Link to="/" className="text-2xl font-script text-charcoal-800">Nura Bahar</Link>
           <div className="flex items-center gap-1 text-stone-400">
@@ -183,7 +236,7 @@ export default function Checkout() {
             <div key={s} className="flex items-center">
               <div className={`flex items-center gap-2 font-body text-xs font-medium ${i <= step ? 'text-charcoal-900' : 'text-stone-400'}`}>
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border-2 transition-colors ${
-                  i < step  ? 'bg-charcoal-900 border-charcoal-900 text-white'
+                  i < step    ? 'bg-charcoal-900 border-charcoal-900 text-white'
                   : i === step ? 'border-charcoal-900 text-charcoal-900'
                   : 'border-stone-300 text-stone-400'
                 }`}>{i < step ? '✓' : i + 1}</span>
@@ -197,6 +250,8 @@ export default function Checkout() {
         </div>
 
         <div className="grid items-start gap-8 lg:grid-cols-5">
+
+          {/* ── Left: forms ── */}
           <div className="space-y-6 lg:col-span-3">
 
             {/* STEP 0: Delivery */}
@@ -204,50 +259,56 @@ export default function Checkout() {
               <div className="p-6 bg-white border border-stone-200 sm:p-8">
                 <h2 className="mb-6 text-2xl font-light font-display text-charcoal-800">Delivery Information</h2>
 
-                {/* Delivery method toggle */}
+                {/* Delivery method */}
                 <div className="mb-6">
                   <p className="block mb-3 text-xs tracking-wider uppercase font-body text-stone-500">Delivery Method *</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <label className={`flex items-center gap-3 p-3 border-2 cursor-pointer transition-colors ${
+
+                    <label className={`flex items-start gap-3 p-3 border-2 cursor-pointer transition-colors ${
                       deliveryMethod === 'home' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                     }`}>
                       <input type="radio" name="delivery" value="home"
                         checked={deliveryMethod === 'home'}
                         onChange={() => setDeliveryMethod('home')}
-                        className="accent-charcoal-900" />
+                        className="mt-0.5 accent-charcoal-900" />
                       <div>
-                        <div className="flex items-center gap-1.5">
-                          <Truck size={14} className="text-charcoal-700" />
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Truck size={13} className="text-charcoal-700 shrink-0" />
                           <span className="text-sm font-medium font-body text-charcoal-800">Home Delivery</span>
                         </div>
-                        <p className="font-body text-[10px] text-stone-400 mt-0.5">
-                          {subtotal > 30000 ? 'Free delivery' : `₦${HOME_SHIPPING.toLocaleString('en-NG')}`}
+                        <p className="font-body text-[10px] text-stone-400 leading-snug">
+                          {form.state.toLowerCase() === 'kano'
+                            ? `Free over ₦${KANO_FREE_THRESHOLD.toLocaleString('en-NG')}`
+                            : `Free over ₦${NIGERIA_FREE_THRESHOLD.toLocaleString('en-NG')}`}
                         </p>
                       </div>
                     </label>
-                    <label className={`flex items-center gap-3 p-3 border-2 cursor-pointer transition-colors ${
+
+                    <label className={`flex items-start gap-3 p-3 border-2 cursor-pointer transition-colors ${
                       deliveryMethod === 'pickup' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                     }`}>
                       <input type="radio" name="delivery" value="pickup"
                         checked={deliveryMethod === 'pickup'}
                         onChange={() => setDeliveryMethod('pickup')}
-                        className="accent-charcoal-900" />
+                        className="mt-0.5 accent-charcoal-900" />
                       <div>
-                        <div className="flex items-center gap-1.5">
-                          <Store size={14} className="text-charcoal-700" />
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Store size={13} className="text-charcoal-700 shrink-0" />
                           <span className="text-sm font-medium font-body text-charcoal-800">Store Pickup</span>
                         </div>
-                        <p className="font-body text-[10px] text-green-600 font-medium mt-0.5">Free — ₦0</p>
+                        <p className="font-body text-[10px] text-green-600 font-medium">Always Free — ₦0</p>
                       </div>
                     </label>
                   </div>
+
                   {deliveryMethod === 'pickup' && (
                     <p className="pl-1 mt-2 text-xs font-body text-stone-500">
-                      📍 Pick up at our Kano store. We'll confirm the location via WhatsApp after your order.
+                      📍 Pick up at our Kano store. We'll send the exact address via WhatsApp after you order.
                     </p>
                   )}
                 </div>
 
+                {/* Customer fields */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
                     <label className="font-body text-xs tracking-wider uppercase text-stone-500 block mb-1.5">Full Name *</label>
@@ -312,6 +373,7 @@ export default function Checkout() {
                 </div>
 
                 <div className="mb-8 space-y-3">
+
                   {/* Paystack */}
                   <label className={`flex items-start gap-4 p-4 border-2 cursor-pointer transition-colors ${
                     method === 'online' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'}`}>
@@ -320,11 +382,28 @@ export default function Checkout() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <CreditCard size={16} className="text-blush-500" />
-                        <span className="text-sm font-semibold font-body text-charcoal-800">Pay Online — Paystack</span>
+                        <span className="text-sm font-semibold font-body text-charcoal-800">Pay with Paystack</span>
                         <span className="font-body text-[10px] text-stone-400 bg-stone-100 px-2 py-0.5">Secure</span>
                       </div>
                       <p className="text-xs leading-relaxed font-body text-stone-500">
-                        Debit/credit card, bank transfer, or USSD. Order confirmed after server-side verification.
+                        Debit/credit card, bank transfer, or USSD. Verified server-side automatically.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Moniepoint */}
+                  <label className={`flex items-start gap-4 p-4 border-2 cursor-pointer transition-colors ${
+                    method === 'moniepoint' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'}`}>
+                    <input type="radio" name="payment" value="moniepoint" checked={method === 'moniepoint'}
+                      onChange={() => setMethod('moniepoint')} className="mt-1 accent-charcoal-900" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CreditCard size={16} className="text-blue-500" />
+                        <span className="text-sm font-semibold font-body text-charcoal-800">Pay with Moniepoint</span>
+                        <span className="font-body text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5">Bank Transfer</span>
+                      </div>
+                      <p className="text-xs leading-relaxed font-body text-stone-500">
+                        Pay via Moniepoint — instant bank transfer or card payment.
                       </p>
                     </div>
                   </label>
@@ -341,21 +420,8 @@ export default function Checkout() {
                         <span className="font-body text-[10px] text-green-600 bg-green-50 px-2 py-0.5">Popular</span>
                       </div>
                       <p className="text-xs leading-relaxed font-body text-stone-500">
-                        Order details sent to admin WhatsApp. They'll confirm and send bank transfer details.
+                        Order sent to admin WhatsApp. They'll confirm and provide bank transfer details.
                       </p>
-                    </div>
-                  </label>
-
-                  {/* Moniepoint — ready, pending credentials */}
-                  <label className="flex items-start gap-4 p-4 border-2 opacity-50 cursor-not-allowed border-stone-100">
-                    <input type="radio" name="payment" value="moniepoint" disabled className="mt-1" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CreditCard size={16} className="text-stone-400" />
-                        <span className="text-sm font-semibold font-body text-stone-400">Pay with Moniepoint</span>
-                        <span className="font-body text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5">Coming Soon</span>
-                      </div>
-                      <p className="text-xs font-body text-stone-400">Moniepoint payment will be available soon.</p>
                     </div>
                   </label>
                 </div>
@@ -372,31 +438,34 @@ export default function Checkout() {
                       <span className="w-4 h-4 border-2 rounded-full border-white/30 border-t-white animate-spin" />
                       Processing…
                     </span>
-                  ) : method === 'online' ? (
-                    <><CreditCard size={16} /> Pay ₦{total.toLocaleString('en-NG')}</>
-                  ) : (
+                  ) : method === 'whatsapp' ? (
                     <><MessageCircle size={16} /> Send Order to WhatsApp</>
+                  ) : (
+                    <><CreditCard size={16} /> Pay ₦{total.toLocaleString('en-NG')}</>
                   )}
                 </button>
 
                 <div className="flex items-center justify-center gap-1.5 mt-4">
                   <Lock size={11} className="text-stone-400" />
-                  <span className="font-body text-[10px] text-stone-400">Secured by Paystack · Payments verified server-side</span>
+                  <span className="font-body text-[10px] text-stone-400">Secured · Payments verified server-side</span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Order summary */}
+          {/* ── Right: order summary ── */}
           <div className="lg:col-span-2 lg:sticky lg:top-28">
             <div className="p-6 bg-white border border-stone-200">
               <h3 className="mb-5 text-xl font-light font-display text-charcoal-800">Order Summary</h3>
+
               <div className="mb-5 space-y-3 overflow-y-auto max-h-64 no-scrollbar">
                 {cartItems.map(item => (
                   <div key={item.key} className="flex items-center gap-3">
                     <div className="relative shrink-0">
                       <div className="h-16 overflow-hidden w-14 bg-stone-100">
-                        <img src={item.images?.[0] || '/images/placeholder-product.svg'} alt={item.name}
+                        <img
+                          src={item.images?.[0] || '/images/placeholder-product.svg'}
+                          alt={item.name}
                           className="object-cover w-full h-full"
                           onError={e => { e.target.onerror = null; e.target.src = '/images/placeholder-product.svg'; }}
                         />
@@ -407,7 +476,9 @@ export default function Checkout() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium font-body text-charcoal-800 line-clamp-1">{item.name}</p>
-                      <p className="font-body text-[10px] text-stone-400">{item.color}{item.size !== 'One Size' ? ` / ${item.size}` : ''}</p>
+                      <p className="font-body text-[10px] text-stone-400">
+                        {item.color}{item.size !== 'One Size' ? ` / ${item.size}` : ''}
+                      </p>
                     </div>
                     <p className="text-xs font-semibold font-body text-charcoal-800 shrink-0">
                       ₦{(item.price * item.quantity).toLocaleString('en-NG')}
@@ -415,20 +486,25 @@ export default function Checkout() {
                   </div>
                 ))}
               </div>
+
               <div className="border-t border-stone-200 pt-4 space-y-2.5">
                 <div className="flex justify-between text-sm font-body text-stone-500">
                   <span>Subtotal</span>
                   <span className="text-charcoal-800">₦{subtotal.toLocaleString('en-NG')}</span>
                 </div>
                 <div className="flex justify-between text-sm font-body text-stone-500">
-                  <span>
-                    {deliveryMethod === 'pickup' ? 'Store Pickup' : 'Shipping'}
-                  </span>
-                  <span className={shipping === 0 ? 'text-green-600 font-medium text-sm' : 'text-charcoal-800'}>
+                  <span>{deliveryMethod === 'pickup' ? 'Store Pickup' : 'Delivery'}</span>
+                  <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-charcoal-800'}>
                     {shipping === 0 ? 'Free' : `₦${shipping.toLocaleString('en-NG')}`}
                   </span>
                 </div>
+                {shipping > 0 && (
+                  <p className="font-body text-[10px] text-stone-400 text-right leading-snug">
+                    {shippingLabel(deliveryMethod, form.state, subtotal)}
+                  </p>
+                )}
               </div>
+
               <div className="pt-4 mt-4 border-t border-stone-200">
                 <div className="flex justify-between font-semibold font-body">
                   <span>Total</span>
@@ -437,6 +513,7 @@ export default function Checkout() {
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
