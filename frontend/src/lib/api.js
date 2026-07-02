@@ -233,7 +233,7 @@ export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeo
 // ── USERS ─────────────────────────────────────────────────────────────────────
 export async function getUsers() {
   try {
-    return await pb.collection('users').getFullList({ sort: '-created' });
+    return await pb.collection('users').getFullList();
   } catch {
     return [];
   }
@@ -356,4 +356,3 @@ function normalizeOrder(record) {
     items: typeof record.items === 'string' ? JSON.parse(record.items) : (record.items || []),
   };
 }
-# Wed Jul  1 20:12:43 WAT 2026
