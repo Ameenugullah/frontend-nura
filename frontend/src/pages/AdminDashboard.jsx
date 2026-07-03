@@ -7,6 +7,7 @@ import {
   RefreshCw, Wifi, WifiOff, Instagram, GripVertical,
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
+import NotificationBell from '../components/NotificationBell';
 import { ALL_CATEGORIES, CATEGORIES_GROUPED, isFragranceCategory } from '../lib/categories';
 import {
   getInstagramPosts,
@@ -1081,9 +1082,12 @@ export default function AdminDashboard() {
             <Menu size={20} className="text-charcoal-800" />
           </button>
           <div className="hidden lg:block" />
-          <p className="text-sm font-body text-stone-400">
-            {new Date().toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <p className="hidden text-sm sm:block font-body text-stone-400">
+              {new Date().toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
         </header>
 
         <div className="max-w-6xl p-6 mx-auto">
