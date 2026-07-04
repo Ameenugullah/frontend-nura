@@ -233,7 +233,7 @@ export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeo
 // ── USERS ─────────────────────────────────────────────────────────────────────
 export async function getUsers() {
   try {
-    return await pb.collection('users').getFullList();
+    return await pb.collection('users').getFullList({ });
   } catch {
     return [];
   }
@@ -260,8 +260,8 @@ export async function getInstagramPosts() {
     return (records.items || []).map(r => ({
       id:         r.id,
       mediaType:  r.media_type || 'image',
-      image:      r.image ? pb.files.getUrl(r, r.image) : null,
-      video:      r.video ? pb.files.getUrl(r, r.video) : null,
+      image:      r.image ? pb.baseUrl + '/api/files/' + r.collectionId + '/' + r.id + '/' + r.image : null,
+      video:      r.video ? pb.baseUrl + '/api/files/' + r.collectionId + '/' + r.id + '/' + r.video : null,
       caption:    r.caption    || '',
       link:       r.link       || '',
       sort_order: r.sort_order || 0,
@@ -324,11 +324,7 @@ function buildProductFormData(data) {
 
 function getImageUrl(record, filename) {
   if (!filename) return '';
-  try {
-    return pb.files.getUrl(record, filename);
-  } catch {
-    return pb.baseUrl + '/api/files/' + record.collectionId + '/' + record.id + '/' + filename;
-  }
+  return pb.baseUrl + '/api/files/' + record.collectionId + '/' + record.id + '/' + filename;
 }
 
 function normalizeProduct(record) {
@@ -356,3 +352,4 @@ function normalizeOrder(record) {
     items: typeof record.items === 'string' ? JSON.parse(record.items) : (record.items || []),
   };
 }
+# Wed Jul  1 20:12:43 WAT 2026
