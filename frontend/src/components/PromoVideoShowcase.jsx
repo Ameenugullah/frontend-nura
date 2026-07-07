@@ -34,7 +34,7 @@ export default function PromoVideoShowcase() {
 
   return (
     <section className="py-16 bg-stone-50">
-      <div className="px-6 mx-auto max-w-4xl">
+      <div className="px-6 mx-auto max-w-7xl">
 
         <div className="mb-8 text-center">
           <p className="font-body text-[10px] tracking-[0.3em] uppercase text-stone-400 mb-2">Our Collection</p>
