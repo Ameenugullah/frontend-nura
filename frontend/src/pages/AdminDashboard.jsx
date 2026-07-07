@@ -53,6 +53,12 @@ export default function AdminDashboard() {
             <Route path="orders"    element={<AdminOrders />} />
             <Route path="customers" element={<AdminCustomers />} />
             <Route path="instagram" element={<AdminInstagramGrid />} />
+            <Route path="*" element={
+              <div className="flex flex-col items-center justify-center py-24 gap-4">
+                <p className="font-body text-[10px] tracking-[0.3em] uppercase text-blush-500">404</p>
+                <h2 className="text-3xl font-light font-display text-charcoal-800">Page not found</h2>
+              </div>
+            } />
           </Routes>
         </div>
       </main>

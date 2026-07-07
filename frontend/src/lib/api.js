@@ -236,6 +236,39 @@ export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeo
   throw new Error('Payment verification timed out. Please contact support with your order reference.');
 }
 
+export async function getOrdersByEmail(email) {
+  try {
+    const params = new URLSearchParams();
+    params.set('filter', `email = "${email.replace(/"/g, '\\"')}"`);
+    params.set('perPage', '200');
+    params.set('sort', '-created');
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (pb.authStore.token) headers['Authorization'] = 'Bearer ' + pb.authStore.token;
+
+    const url = pb.baseUrl + '/api/collections/orders/records?' + params.toString();
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return (data.items || []).map(normalizeOrder);
+  } catch (err) {
+    console.warn('getOrdersByEmail failed:', err.message);
+    return [];
+  }
+}
+
+export async function decrementStock(id, quantity) {
+  try {
+    const url = pb.baseUrl + '/api/collections/products/records/' + id;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const product = await res.json();
+    const newStock = Math.max(0, Number(product.stock || 0) - Number(quantity));
+    await pb.collection('products').update(id, { stock: newStock });
+    invalidateProductsCache();
+  } catch { /* best-effort */ }
+}
+
 // ── USERS ─────────────────────────────────────────────────────────────────────
 export async function getUsers() {
   try {

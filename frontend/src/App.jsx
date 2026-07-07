@@ -17,6 +17,8 @@ import Login                from './pages/Login';
 import ForgotPassword       from './pages/ForgotPassword';
 import About                from './pages/About';
 import Contact              from './pages/Contact';
+import Orders               from './pages/Orders';
+import Wishlist             from './pages/Wishlist';
 import AdminDashboard       from './pages/AdminDashboard';
 
 function ScrollToTop() {
@@ -43,6 +45,8 @@ function StoreLayout() {
           <Route path="contact"               element={<Contact />} />
           <Route path="login"                 element={<Login />} />
           <Route path="forgot-password"       element={<ForgotPassword />} />
+          <Route path="orders"               element={<Orders />} />
+          <Route path="wishlist"             element={<Wishlist />} />
           <Route path="*" element={
             <div className="flex items-center justify-center min-h-screen pt-20">
               <div className="px-6 text-center">

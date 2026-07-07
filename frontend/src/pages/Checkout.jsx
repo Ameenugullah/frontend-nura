@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MessageCircle, CreditCard, ChevronRight, Lock, CheckCircle, Truck, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { createOrder } from '../lib/api';
+import { createOrder, decrementStock } from '../lib/api';
 import {
   initializePaystackPayment,
   initializeMoniepointPayment,
@@ -114,6 +114,8 @@ export default function Checkout() {
         paymentMethod: method,
       });
       newOrderId = record.id;
+      // Best-effort stock decrement — silently ignored if permissions don't allow it
+      cartItems.forEach(i => decrementStock(i.id, i.quantity));
     } catch {
       setLoading(false);
       setError('Could not create your order. Please check your connection and try again.');

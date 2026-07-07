@@ -144,6 +144,12 @@ export default function Navbar() {
                 <div className="absolute right-0 z-50 hidden pt-1 top-full group-hover:block">
                   <div className="bg-white border border-stone-200 shadow-card min-w-[160px] py-2">
                     <p className="px-4 py-2 mb-1 text-xs border-b font-body text-charcoal-700/60 border-stone-100">{user.email}</p>
+                    <Link
+                      to="/orders"
+                      className="block px-4 py-2 text-sm transition-colors font-body text-charcoal-700 hover:bg-stone-50 hover:text-charcoal-900"
+                    >
+                      My Orders
+                    </Link>
                     <button
                       onClick={logout}
                       className="block w-full px-4 py-2 text-sm text-left transition-colors font-body text-charcoal-700 hover:bg-stone-50 hover:text-blush-500"
@@ -159,14 +165,14 @@ export default function Navbar() {
               </Link>
             )}
 
-            <button className="relative items-center justify-center hidden transition-colors sm:flex w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Wishlist">
+            <Link to="/wishlist" className="relative items-center justify-center hidden transition-colors sm:flex w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Wishlist">
               <Heart size={18} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-blush-500 text-white font-body text-[9px] rounded-full">
                   {wishlistCount > 9 ? '9+' : wishlistCount}
                 </span>
               )}
-            </button>
+            </Link>
 
             <Link to="/cart" className="relative flex items-center justify-center transition-colors w-9 h-9 text-charcoal-800 hover:text-blush-500" aria-label="Cart">
               <ShoppingBag size={18} />
@@ -243,6 +249,7 @@ export default function Navbar() {
               {user ? (
                 <>
                   <p className="text-xs font-body text-charcoal-700/60">{user.email}</p>
+                  <Link to="/orders" className="w-full text-center btn-outline">My Orders</Link>
                   <button onClick={logout} className="w-full btn-outline">Sign out</button>
                 </>
               ) : (
