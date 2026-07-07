@@ -1,13 +1,9 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, CreditCard, ChevronRight, Lock, CheckCircle, Truck, Store } from 'lucide-react';
+import { CreditCard, ChevronRight, Lock, Truck, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createOrder, decrementStock } from '../lib/api';
-import {
-  initializePaystackPayment,
-  initializeMoniepointPayment,
-  sendWhatsAppOrder,
-} from '../lib/paystack';
+import { initializePaystackPayment } from '../lib/paystack';
 
 const STATES = [
   'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno','Cross River',
@@ -16,12 +12,12 @@ const STATES = [
   'Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara',
 ];
 
-const STEPS = ['Delivery', 'Payment', 'Confirm'];
+const STEPS = ['Delivery', 'Pay'];
 
 // ── Shipping logic ────────────────────────────────────────────────────────────
-// Store Pickup  → always ₦0
-// Kano state    → free if subtotal ≥ ₦200,000  else ₦2,500
-// Rest of Nigeria → free if subtotal ≥ ₦300,000 else ₦2,500
+// Store Pickup      → always ₦0
+// Kano state        → free if subtotal ≥ ₦200,000  else ₦2,500
+// Rest of Nigeria   → free if subtotal ≥ ₦300,000  else ₦2,500
 const FLAT_RATE              = 2_500;
 const KANO_FREE_THRESHOLD    = 200_000;
 const NIGERIA_FREE_THRESHOLD = 300_000;
@@ -29,16 +25,14 @@ const NIGERIA_FREE_THRESHOLD = 300_000;
 function calcShipping(deliveryMethod, state, subtotal) {
   if (deliveryMethod === 'pickup') return 0;
   const isKano = state?.toLowerCase() === 'kano';
-  const threshold = isKano ? KANO_FREE_THRESHOLD : NIGERIA_FREE_THRESHOLD;
-  return subtotal >= threshold ? 0 : FLAT_RATE;
+  return subtotal >= (isKano ? KANO_FREE_THRESHOLD : NIGERIA_FREE_THRESHOLD) ? 0 : FLAT_RATE;
 }
 
 function shippingLabel(deliveryMethod, state, subtotal) {
   if (deliveryMethod === 'pickup') return 'Store Pickup — Free';
   const isKano    = state?.toLowerCase() === 'kano';
   const threshold = isKano ? KANO_FREE_THRESHOLD : NIGERIA_FREE_THRESHOLD;
-  const isFree    = subtotal >= threshold;
-  if (isFree) return `Free delivery (orders ≥ ₦${threshold.toLocaleString('en-NG')})`;
+  if (subtotal >= threshold) return `Free delivery (orders ≥ ₦${threshold.toLocaleString('en-NG')})`;
   return `₦${FLAT_RATE.toLocaleString('en-NG')} — Free over ₦${threshold.toLocaleString('en-NG')}`;
 }
 
@@ -47,21 +41,18 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const [deliveryMethod, setDeliveryMethod] = useState('home');
-  const [step,           setStep]           = useState(0);
-  const [loading,        setLoading]        = useState(false);
-  const [error,          setError]          = useState('');
-  const [orderId,        setOrderId]        = useState('');
-  const [method,         setMethod]         = useState('online');   // 'online' | 'moniepoint' | 'whatsapp'
-  const [whatsappDone,   setWhatsappDone]   = useState(false);
+  const [step,    setStep]    = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
 
   const [form, setForm] = useState({
     customerName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: 'Kano',
-    notes: '',
+    email:        '',
+    phone:        '',
+    address:      '',
+    city:         '',
+    state:        'Kano',
+    notes:        '',
   });
 
   const shipping = useMemo(
@@ -78,7 +69,7 @@ export default function Checkout() {
   const validate = () => {
     const { customerName, email, phone, address, city } = form;
     if (!customerName.trim()) return 'Please enter your full name.';
-    if (!/\S+@\S+\.\S+/.test(email)) return 'Please enter a valid email.';
+    if (!/\S+@\S+\.\S+/.test(email)) return 'Please enter a valid email address.';
     if (!phone.trim()) return 'Please enter your phone number.';
     if (deliveryMethod === 'home') {
       if (!address.trim()) return 'Please enter your delivery address.';
@@ -111,10 +102,10 @@ export default function Checkout() {
         subtotal,
         shipping,
         total,
-        paymentMethod: method,
+        paymentMethod: 'paystack',
       });
       newOrderId = record.id;
-      // Best-effort stock decrement — silently ignored if permissions don't allow it
+      // Best-effort stock decrement — silently ignored if permissions disallow it
       cartItems.forEach(i => decrementStock(i.id, i.quantity));
     } catch {
       setLoading(false);
@@ -122,76 +113,31 @@ export default function Checkout() {
       return;
     }
 
-    setOrderId(newOrderId);
-
-    if (method === 'online') {
-      try {
-        await initializePaystackPayment({
-          email:   form.email,
-          amount:  total,
-          orderId: newOrderId,
-          name:    form.customerName,
-          phone:   form.phone,
-          onPopupClosed: ({ cancelled }) => {
-            setLoading(false);
-            if (cancelled) {
-              setError("Payment was cancelled. You can try again whenever you're ready.");
-            } else {
-              navigate(`/order/${newOrderId}/verifying`);
-            }
-          },
-        });
-      } catch {
-        setLoading(false);
-        setError('Could not load the payment window. Please check your connection and try again.');
-      }
-
-    } else if (method === 'moniepoint') {
-      try {
-        await initializeMoniepointPayment({
-          email:   form.email,
-          amount:  total,
-          orderId: newOrderId,
-          name:    form.customerName,
-          phone:   form.phone,
-          onDone: ({ cancelled }) => {
-            setLoading(false);
-            if (cancelled) {
-              setError("Payment was cancelled. You can try again whenever you're ready.");
-            } else {
-              navigate(`/order/${newOrderId}/verifying`);
-            }
-          },
-        });
-      } catch {
-        setLoading(false);
-        setError('Could not load the payment window. Please check your connection and try again.');
-      }
-
-    } else {
-      // WhatsApp
-      sendWhatsAppOrder({
-        customerName:   form.customerName,
-        phone:          form.phone,
-        address:        deliveryMethod === 'pickup' ? 'STORE PICKUP' : form.address,
-        city:           deliveryMethod === 'pickup' ? 'Kano (Store)' : form.city,
-        state:          form.state,
-        deliveryMethod,
-        items:          cartItems,
-        subtotal,
-        shipping,
-        total,
-        orderId:        newOrderId,
+    try {
+      await initializePaystackPayment({
+        email:   form.email,
+        amount:  total,
+        orderId: newOrderId,
+        name:    form.customerName,
+        phone:   form.phone,
+        onPopupClosed: ({ cancelled }) => {
+          setLoading(false);
+          if (cancelled) {
+            setError("Payment was cancelled. Your order is saved — you can try again whenever you're ready.");
+          } else {
+            clearCart();
+            navigate(`/order/${newOrderId}/verifying`);
+          }
+        },
       });
+    } catch {
       setLoading(false);
-      clearCart();
-      setWhatsappDone(true);
-      setStep(2);
+      setError('Could not load the payment window. Please check your connection and try again.');
     }
   };
 
   // ── Empty cart ──────────────────────────────────────────────────────────────
-  if (!cartItems.length && step < 2) {
+  if (!cartItems.length) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-stone-50">
         <div className="px-6 text-center">
@@ -202,33 +148,6 @@ export default function Checkout() {
     );
   }
 
-  // ── WhatsApp success screen ─────────────────────────────────────────────────
-  if (step === 2 && whatsappDone) {
-    return (
-      <div className="flex items-center justify-center min-h-screen px-6 bg-stone-50">
-        <div className="w-full max-w-md text-center">
-          <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-green-50">
-            <CheckCircle size={32} className="text-green-600" />
-          </div>
-          <h1 className="mb-3 text-4xl italic font-light font-display text-charcoal-800">Order Sent!</h1>
-          <p className="mb-2 text-sm font-body text-stone-500">
-            Your order has been sent to our WhatsApp. We'll confirm shortly and provide payment details.
-          </p>
-          {orderId && (
-            <p className="mb-8 text-xs font-body text-stone-400">
-              Order ref: <span className="font-semibold text-charcoal-800">NB-{orderId.slice(-6)}</span>
-            </p>
-          )}
-          <div className="flex flex-col justify-center gap-3 sm:flex-row">
-            <Link to="/products" className="btn-primary">Continue Shopping</Link>
-            <Link to="/" className="btn-outline">Back to Home</Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Main checkout ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen pt-6 bg-stone-50">
       <div className="max-w-6xl px-6 pb-20 mx-auto">
@@ -238,7 +157,7 @@ export default function Checkout() {
           <Link to="/" className="text-2xl font-script text-charcoal-800">Nura Bahar</Link>
           <div className="flex items-center gap-1 text-stone-400">
             <Lock size={12} />
-            <span className="text-xs font-body">Secure Checkout</span>
+            <span className="text-xs font-body">Secure Checkout · Paystack</span>
           </div>
         </div>
 
@@ -271,11 +190,10 @@ export default function Checkout() {
               <div className="p-6 bg-white border border-stone-200 sm:p-8">
                 <h2 className="mb-6 text-2xl font-light font-display text-charcoal-800">Delivery Information</h2>
 
-                {/* Delivery method */}
+                {/* Delivery method toggle */}
                 <div className="mb-6">
                   <p className="block mb-3 text-xs tracking-wider uppercase font-body text-stone-500">Delivery Method *</p>
                   <div className="grid grid-cols-2 gap-3">
-
                     <label className={`flex items-start gap-3 p-3 border-2 cursor-pointer transition-colors ${
                       deliveryMethod === 'home' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                     }`}>
@@ -315,7 +233,7 @@ export default function Checkout() {
 
                   {deliveryMethod === 'pickup' && (
                     <p className="pl-1 mt-2 text-xs font-body text-stone-500">
-                      📍 Pick up at our Kano store. We'll send the exact address via WhatsApp after you order.
+                      Pick up at our Kano store. We'll send the exact address after you order.
                     </p>
                   )}
                 </div>
@@ -370,72 +288,41 @@ export default function Checkout() {
 
                 <button onClick={goToPayment}
                   className="btn-primary w-full justify-center mt-6 py-3.5 flex items-center gap-2">
-                  Continue to Payment <ChevronRight size={16} />
+                  Review & Pay <ChevronRight size={16} />
                 </button>
               </div>
             )}
 
-            {/* STEP 1: Payment */}
+            {/* STEP 1: Pay */}
             {step === 1 && (
               <div className="p-6 bg-white border border-stone-200 sm:p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <button onClick={() => setStep(0)}
                     className="text-xs transition-colors font-body text-stone-400 hover:text-charcoal-800">← Back</button>
-                  <h2 className="text-2xl font-light font-display text-charcoal-800">Payment Method</h2>
+                  <h2 className="text-2xl font-light font-display text-charcoal-800">Review & Pay</h2>
                 </div>
 
-                <div className="mb-8 space-y-3">
+                {/* Delivery summary */}
+                <div className="p-4 mb-6 border bg-stone-50 border-stone-200 space-y-1.5 text-xs font-body text-charcoal-700">
+                  <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Name</span><br />{form.customerName}</p>
+                  <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Email</span><br />{form.email}</p>
+                  <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Phone</span><br />{form.phone}</p>
+                  {deliveryMethod === 'pickup' ? (
+                    <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Delivery</span><br />Store Pickup — Kano</p>
+                  ) : (
+                    <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Delivery</span><br />{form.address}, {form.city}, {form.state}</p>
+                  )}
+                </div>
 
-                  {/* Paystack */}
-                  <label className={`flex items-start gap-4 p-4 border-2 cursor-pointer transition-colors ${
-                    method === 'online' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'}`}>
-                    <input type="radio" name="payment" value="online" checked={method === 'online'}
-                      onChange={() => setMethod('online')} className="mt-1 accent-charcoal-900" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CreditCard size={16} className="text-blush-500" />
-                        <span className="text-sm font-semibold font-body text-charcoal-800">Pay with Paystack</span>
-                        <span className="font-body text-[10px] text-stone-400 bg-stone-100 px-2 py-0.5">Secure</span>
-                      </div>
-                      <p className="text-xs leading-relaxed font-body text-stone-500">
-                        Debit/credit card, bank transfer, or USSD. Verified server-side automatically.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Moniepoint */}
-                  <label className={`flex items-start gap-4 p-4 border-2 cursor-pointer transition-colors ${
-                    method === 'moniepoint' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'}`}>
-                    <input type="radio" name="payment" value="moniepoint" checked={method === 'moniepoint'}
-                      onChange={() => setMethod('moniepoint')} className="mt-1 accent-charcoal-900" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CreditCard size={16} className="text-blue-500" />
-                        <span className="text-sm font-semibold font-body text-charcoal-800">Pay with Moniepoint</span>
-                        <span className="font-body text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5">Bank Transfer</span>
-                      </div>
-                      <p className="text-xs leading-relaxed font-body text-stone-500">
-                        Pay via Moniepoint — instant bank transfer or card payment.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* WhatsApp */}
-                  <label className={`flex items-start gap-4 p-4 border-2 cursor-pointer transition-colors ${
-                    method === 'whatsapp' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'}`}>
-                    <input type="radio" name="payment" value="whatsapp" checked={method === 'whatsapp'}
-                      onChange={() => setMethod('whatsapp')} className="mt-1 accent-charcoal-900" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <MessageCircle size={16} className="text-green-500" />
-                        <span className="text-sm font-semibold font-body text-charcoal-800">Pay via WhatsApp</span>
-                        <span className="font-body text-[10px] text-green-600 bg-green-50 px-2 py-0.5">Popular</span>
-                      </div>
-                      <p className="text-xs leading-relaxed font-body text-stone-500">
-                        Order sent to admin WhatsApp. They'll confirm and provide bank transfer details.
-                      </p>
-                    </div>
-                  </label>
+                {/* Paystack payment info */}
+                <div className="flex items-start gap-4 p-4 border-2 border-charcoal-900 bg-stone-50 mb-6">
+                  <CreditCard size={20} className="text-blush-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold font-body text-charcoal-800 mb-0.5">Pay with Paystack</p>
+                    <p className="text-xs leading-relaxed font-body text-stone-500">
+                      Debit/credit card, bank transfer, or USSD. Secured and verified server-side — your order is only confirmed after payment is verified.
+                    </p>
+                  </div>
                 </div>
 
                 {error && <p className="mb-4 text-xs font-body text-blush-500">{error}</p>}
@@ -450,16 +337,14 @@ export default function Checkout() {
                       <span className="w-4 h-4 border-2 rounded-full border-white/30 border-t-white animate-spin" />
                       Processing…
                     </span>
-                  ) : method === 'whatsapp' ? (
-                    <><MessageCircle size={16} /> Send Order to WhatsApp</>
                   ) : (
-                    <><CreditCard size={16} /> Pay ₦{total.toLocaleString('en-NG')}</>
+                    <><CreditCard size={16} /> Pay ₦{total.toLocaleString('en-NG')} with Paystack</>
                   )}
                 </button>
 
                 <div className="flex items-center justify-center gap-1.5 mt-4">
                   <Lock size={11} className="text-stone-400" />
-                  <span className="font-body text-[10px] text-stone-400">Secured · Payments verified server-side</span>
+                  <span className="font-body text-[10px] text-stone-400">256-bit SSL · Payments verified server-side by Paystack</span>
                 </div>
               </div>
             )}

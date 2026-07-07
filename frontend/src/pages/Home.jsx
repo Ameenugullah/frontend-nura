@@ -259,7 +259,7 @@ export default function Home() {
       </section>
 
       <Ticker
-        items={['Pay with Paystack', 'WhatsApp ordering available', 'New arrivals weekly', 'Nationwide delivery', 'Trusted by 3,000+ customers']}
+        items={['Secure payment via Paystack', 'New arrivals weekly', 'Nationwide delivery', 'Trusted by 3,000+ customers']}
         bgClass="bg-charcoal-900"
         textClass="text-white/50"
       />

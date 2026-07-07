@@ -12,7 +12,7 @@
 //   From:     Nuraarabi@yahoo.com
 //
 // This hook fires whenever an order's paymentStatus is set to "paid"
-// (triggered by the Paystack or Moniepoint webhook in payments.pb.js).
+// (triggered by the Paystack webhook in payments.pb.js).
 // ─────────────────────────────────────────────────────────────────────────────
 
 onRecordAfterUpdateSuccess((e) => {

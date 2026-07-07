@@ -164,7 +164,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Nura Bahar Nigeria. All rights reserved.
           </p>
           <div className="flex items-center gap-2">
-            {['VISA', 'MC', 'Paystack', 'Moniepoint', 'Transfer'].map(p => (
+            {['VISA', 'MC', 'Paystack', 'Transfer'].map(p => (
               <span key={p} className="font-body text-[10px] font-semibold text-stone-400 border border-white/10 bg-white/5 px-2 py-0.5">{p}</span>
             ))}
           </div>
