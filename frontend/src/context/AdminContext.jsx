@@ -168,7 +168,7 @@ export function AdminProvider({ children }) {
   return (
     <AdminContext.Provider value={{
       isAdminLoggedIn: isLoggedIn, login, logout, loginError, loading, pbConnected,
-      allProducts: pbProducts, adminProducts: pbProducts,
+      adminProducts: pbProducts,
       addProduct, editProduct, deleteProduct: removeProduct, updateStock, getStock,
       orders, changeOrderStatus, deleteOrder: removeOrder, refreshOrders: loadOrders,
       users, refreshUsers: loadUsers,

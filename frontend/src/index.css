@@ -83,6 +83,9 @@
 
   .badge { @apply absolute top-3 left-3 font-body text-[10px] font-semibold tracking-wider uppercase px-2.5 py-1 z-10; }
 
+  /* Admin form field labels */
+  .label-xs { @apply block font-body text-[10px] tracking-[0.15em] uppercase text-stone-400 mb-1; }
+
   /* Ticker — single continuous marquee, no jump */
   .ticker-track {
     display: flex;
