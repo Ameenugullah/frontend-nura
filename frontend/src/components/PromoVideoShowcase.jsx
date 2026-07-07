@@ -33,8 +33,8 @@ export default function PromoVideoShowcase() {
   const isSingle = videos.length === 1;
 
   return (
-    <section className="py-16 bg-stone-50">
-      <div className="px-6 mx-auto max-w-7xl">
+    <section className="bg-stone-50">
+      <div className="w-full">
 
         <div className="mb-8 text-center">
           <p className="font-body text-[10px] tracking-[0.3em] uppercase text-stone-400 mb-2">Our Collection</p>
