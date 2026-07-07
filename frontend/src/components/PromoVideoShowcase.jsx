@@ -42,7 +42,7 @@ export default function PromoVideoShowcase() {
         </div>
 
         {/* Video container — 16:9, both videos stacked in DOM for zero-gap fade */}
-        <div className="relative overflow-hidden aspect-video bg-stone-900 shadow-soft">
+        <div className="relative overflow-hidden w-full h-[70vh] bg-stone-900 shadow-soft">
           {videos.map((v, i) => (
             <video
               key={v.id}
