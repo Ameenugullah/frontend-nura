@@ -450,7 +450,7 @@ function PerksSlider() {
         setIdx(i => (i + 1) % perks.length);
         setVisible(true);
       }, 300);
-    }, 2800);
+    }, 1800);
     return () => clearInterval(t);
   }, []);
 
