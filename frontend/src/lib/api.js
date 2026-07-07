@@ -178,10 +178,16 @@ export async function createOrder(data) {
   return record;
 }
 
+const VALID_ORDER_STATUSES = new Set([
+  'pending', 'processing', 'paid', 'shipped', 'delivered', 'cancelled', 'failed', 'refunded',
+]);
+
 export async function getOrders(status) {
   try {
     const params = new URLSearchParams();
-    if (status) params.set('filter', 'status = "' + status + '"');
+    if (status && VALID_ORDER_STATUSES.has(status)) {
+      params.set('filter', `status = "${status}"`);
+    }
     params.set('perPage', '200');
 
     const headers = { 'Content-Type': 'application/json' };
