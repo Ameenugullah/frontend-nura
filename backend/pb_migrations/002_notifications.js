@@ -1,22 +1,22 @@
-migrate((app) => {
+migrate(function(app) {
 
   // ── Fix orders access rules ─────────────────────────────────────────────────
-  // Previous viewRule allowed ANY authenticated user to read any order by ID.
-  // This tightens it: customers can only access their own orders.
+  // Tighten viewRule/listRule: previously any authenticated user could read
+  // any order by ID. Now customers can only access their own orders.
   try {
-    const orders = app.findCollectionByNameOrId("orders");
+    var orders = app.findCollectionByNameOrId("orders");
     orders.listRule = "email = @request.auth.email || @request.auth.collectionName = '_superusers'";
     orders.viewRule = "email = @request.auth.email || @request.auth.collectionName = '_superusers'";
-    app.saveCollection(orders);
+    app.save(orders);
   } catch (err) {
+    // Log but don't abort — the notifications collection is the critical part
     console.error("002_notifications: failed to update orders rules:", String(err));
   }
 
   // ── notifications ──────────────────────────────────────────────────────────
-  // Admin-only. Created exclusively by the payments.pb.js webhook hook via
-  // $app.save(), which bypasses API rules. The frontend reads this collection
-  // to power the admin notification bell.
-  const notifications = new Collection({
+  // Admin-only. Written by payments.pb.js after verified Paystack payment.
+  // The frontend admin panel subscribes to this collection for the bell UI.
+  var notifications = new Collection({
     name:       "notifications",
     type:       "base",
     listRule:   "@request.auth.collectionName = '_superusers'",
@@ -34,11 +34,11 @@ migrate((app) => {
       { name: "read",          type: "bool",   required: false },
     ],
   });
-  app.saveCollection(notifications);
+  app.save(notifications);
 
-}, (app) => {
+}, function(app) {
   try {
-    const col = app.findCollectionByNameOrId("notifications");
-    app.deleteCollection(col);
+    var col = app.findCollectionByNameOrId("notifications");
+    app.delete(col);
   } catch (_) {}
 });
