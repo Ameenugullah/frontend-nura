@@ -48,7 +48,7 @@ export default function PromoVideoShowcase() {
               key={v.id}
               ref={el => { videoRefs.current[i] = el; }}
               src={v.video}
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+              className="absolute inset-0 w-full h-full object-contain transition-opacity duration-700"
               style={{ opacity: i === activeIdx ? 1 : 0 }}
               autoPlay={i === 0}
               muted
