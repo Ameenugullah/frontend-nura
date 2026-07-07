@@ -68,16 +68,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AdminProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <Routes>
-                <Route path="/admin/*" element={<AdminDashboard />} />
-                <Route path="/*"       element={<StoreLayout />} />
-              </Routes>
-            </WishlistProvider>
-          </CartProvider>
-        </AdminProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <Routes>
+              <Route path="/admin/*" element={
+                <AdminProvider>
+                  <AdminDashboard />
+                </AdminProvider>
+              } />
+              <Route path="/*" element={<StoreLayout />} />
+            </Routes>
+          </WishlistProvider>
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );
