@@ -161,13 +161,16 @@ export default function Home() {
       {/* Perks bar */}
       <section className="py-5 bg-white border-y border-stone-200">
         <div className="px-6 mx-auto max-w-7xl">
-          <div className="flex flex-col items-center justify-between gap-4 divide-y sm:flex-row sm:divide-y-0 sm:divide-x divide-stone-100">
+          {/* Mobile/tablet: auto-sliding single perk */}
+          <PerksSlider />
+          {/* Desktop: horizontal row */}
+          <div className="hidden sm:flex items-center justify-between gap-4 divide-x divide-stone-100">
             {perks.map(({ icon: Icon, label, sub }) => (
-              <div key={label} className="flex items-center justify-center w-full gap-3 px-4 py-1 sm:w-auto">
+              <div key={label} className="flex items-center justify-center w-full gap-3 px-4 py-1">
                 <Icon size={20} className="text-charcoal-800 shrink-0" strokeWidth={1.5} />
                 <div>
                   <p className="text-xs font-semibold tracking-wide font-body text-charcoal-800">{label}</p>
-                  <p className="hidden text-xs font-body text-stone-400 sm:block">{sub}</p>
+                  <p className="text-xs font-body text-stone-400">{sub}</p>
                 </div>
               </div>
             ))}
@@ -433,6 +436,39 @@ function FeaturedTabCarousel({ allProducts }) {
         </div>
       )}
     </>
+  );
+}
+
+function PerksSlider() {
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIdx(i => (i + 1) % perks.length);
+        setVisible(true);
+      }, 300);
+    }, 2800);
+    return () => clearInterval(t);
+  }, []);
+
+  const { icon: Icon, label, sub } = perks[idx];
+
+  return (
+    <div className="flex sm:hidden items-center justify-center gap-3 py-1 h-10">
+      <div
+        className="flex items-center gap-3 transition-opacity duration-300"
+        style={{ opacity: visible ? 1 : 0 }}
+      >
+        <Icon size={20} className="text-charcoal-800 shrink-0" strokeWidth={1.5} />
+        <div>
+          <p className="text-xs font-semibold tracking-wide font-body text-charcoal-800">{label}</p>
+          <p className="text-xs font-body text-stone-400">{sub}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
