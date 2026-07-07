@@ -289,6 +289,24 @@ export async function subscribeNewsletter(email) {
   }
 }
 
+// ── NOTIFICATIONS (admin-only) ────────────────────────────────────────────────
+export async function getNotifications() {
+  try {
+    const result = await pb.collection('notifications').getList(1, 50, { sort: '-created' });
+    return result.items;
+  } catch {
+    return [];
+  }
+}
+
+export async function markNotificationRead(id) {
+  return pb.collection('notifications').update(id, { read: true });
+}
+
+export async function deleteNotification(id) {
+  return pb.collection('notifications').delete(id);
+}
+
 // ── INSTAGRAM GRID ────────────────────────────────────────────────────────────
 export async function getInstagramPosts() {
   try {
