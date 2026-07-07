@@ -58,13 +58,13 @@ export function AdminProvider({ children }) {
     } catch { /* silently fail */ }
   }, []);
 
-  useEffect(() => { loadProducts(); }, [loadProducts]);
   useEffect(() => {
     if (isLoggedIn) {
+      loadProducts();
       loadOrders();
       loadUsers();
     }
-  }, [isLoggedIn, loadOrders, loadUsers]);
+  }, [isLoggedIn, loadProducts, loadOrders, loadUsers]);
 
   const login = useCallback(async (email, password) => {
     const result = await adminLogin(email, password);

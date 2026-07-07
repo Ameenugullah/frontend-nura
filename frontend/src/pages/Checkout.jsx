@@ -477,6 +477,7 @@ export default function Checkout() {
                           src={item.images?.[0] || '/images/placeholder-product.svg'}
                           alt={item.name}
                           className="object-cover w-full h-full"
+                          loading="lazy"
                           onError={e => { e.target.onerror = null; e.target.src = '/images/placeholder-product.svg'; }}
                         />
                       </div>

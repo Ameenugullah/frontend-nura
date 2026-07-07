@@ -34,18 +34,16 @@ export default function ProductDetail() {
     setImgIdx(0);
 
     async function load() {
-      const p = await getProductById(id);
+      // Fetch the product and the full catalogue concurrently — the catalogue
+      // is already cached after the first Products page visit, so the second
+      // request is nearly instant on repeat navigations.
+      const [p, all] = await Promise.all([getProductById(id), getProducts()]);
       if (cancelled) return;
       if (!p) { setLoading(false); return; }
       setProduct(p);
       setSize(p.sizes?.[0] || 'One Size');
       setColor(p.colors?.[0] || '');
-
-      // Fetch same-category products for "Related" section
-      const all = await getProducts();
-      if (!cancelled) {
-        setRelated(all.filter(x => x.category === p.category && x.id !== p.id).slice(0, 4));
-      }
+      setRelated(all.filter(x => x.category === p.category && x.id !== p.id).slice(0, 4));
       setLoading(false);
     }
 
@@ -112,6 +110,7 @@ export default function ProductDetail() {
                   <button key={i} onClick={() => setImgIdx(i)}
                     className={`aspect-square overflow-hidden border-2 transition-colors ${imgIdx === i ? 'border-charcoal-900' : 'border-transparent'}`}>
                     <img src={img} alt={`View ${i+1}`} className="object-cover w-full h-full"
+                      loading="lazy"
                       onError={e => { e.target.onerror = null; e.target.src = FALLBACK; }} />
                   </button>
                 ))}
