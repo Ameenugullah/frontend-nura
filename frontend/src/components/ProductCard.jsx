@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Heart } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCart }     from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 export default function ProductCard({ product }) {
   const cart = useCart();
-  const [imgIdx,     setImgIdx]     = useState(0);
-  const [added,      setAdded]      = useState(false);
-  const [wishlisted, setWishlisted] = useState(false);
+  const { toggle, isWishlisted } = useWishlist();
+  const [imgIdx, setImgIdx] = useState(0);
+  const [added,  setAdded]  = useState(false);
+  const wishlisted = isWishlisted(product.id);
 
   const images      = product.images || [];
   const mainImg     = images[imgIdx] || null;
@@ -28,7 +30,7 @@ export default function ProductCard({ product }) {
   const handleWishlist = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setWishlisted(w => !w);
+    toggle(product);
   };
 
   return (

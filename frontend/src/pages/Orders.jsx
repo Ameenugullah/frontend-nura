@@ -23,7 +23,7 @@ export default function Orders() {
   const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return; }
+    if (!user) { navigate('/login', { state: { from: '/orders' } }); return; }
     getOrdersByEmail(user.email).then(data => {
       setOrders(data);
       setLoading(false);

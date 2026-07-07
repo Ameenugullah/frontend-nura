@@ -63,10 +63,10 @@ export default function AdminInstagramGrid() {
     setSaving(true);
     try {
       const data = {
-        caption:   form.caption,
-        link:      form.link,
-        order:     Number(form.order) || 0,
-        imageFile: imageFile || undefined,
+        caption:    form.caption,
+        link:       form.link,
+        sort_order: Number(form.order) || 0,
+        imageFile:  imageFile || undefined,
       };
       if (editTarget) await updateInstagramPost(editTarget.id, data);
       else             await createInstagramPost(data);

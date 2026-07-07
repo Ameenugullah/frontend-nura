@@ -7,9 +7,10 @@ const ALL_STATUSES = ['pending','processing','paid','shipped','delivered','cance
 
 export default function AdminOrders() {
   const { orders, changeOrderStatus, deleteOrder, refreshOrders, loading } = useAdmin();
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [detail, setDetail] = useState(null);
+  const [search,    setSearch]    = useState('');
+  const [filter,    setFilter]    = useState('all');
+  const [detail,    setDetail]    = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
 
   const filtered = orders.filter(o => {
     const matchFilter = filter === 'all' || o.status === filter;
@@ -91,7 +92,7 @@ export default function AdminOrders() {
                       className="flex items-center justify-center transition-colors w-7 h-7 text-stone-400 hover:text-charcoal-800">
                       <Eye size={13} />
                     </button>
-                    <button onClick={() => deleteOrder(o.id)}
+                    <button onClick={() => setConfirmId(o.id)}
                       className="flex items-center justify-center transition-colors w-7 h-7 text-stone-400 hover:text-blush-500">
                       <Trash2 size={13} />
                     </button>
@@ -105,6 +106,20 @@ export default function AdminOrders() {
           </tbody>
         </table>
       </div>
+
+      {confirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-900/60">
+          <div className="w-full max-w-sm p-6 text-center bg-white">
+            <Trash2 size={24} className="mx-auto mb-3 text-blush-500" />
+            <h3 className="mb-2 text-sm font-semibold font-body text-charcoal-800">Delete this order?</h3>
+            <p className="mb-5 text-xs font-body text-stone-400">This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => { deleteOrder(confirmId); setConfirmId(null); }} className="flex-1 py-2 btn-blush">Delete</button>
+              <button onClick={() => setConfirmId(null)} className="flex-1 py-2 btn-outline">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-charcoal-900/60">
