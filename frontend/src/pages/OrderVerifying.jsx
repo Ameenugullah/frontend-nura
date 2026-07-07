@@ -59,7 +59,7 @@ export default function OrderVerifying() {
             </div>
             <h1 className="font-display text-3xl text-charcoal-800 font-light italic mb-3">Verifying your payment…</h1>
             <p className="font-body text-sm text-stone-500 mb-2">
-              We're confirming your transaction with Paystack. This usually takes a few seconds — please don't close this page.
+              We're confirming your payment. This usually takes a few seconds — please don't close this page.
             </p>
             {order && (
               <p className="font-body text-xs text-stone-400 mt-4">
@@ -99,7 +99,7 @@ export default function OrderVerifying() {
             <p className="font-body text-sm text-stone-500 mb-2">
               {state === 'timeout'
                 ? 'Verification is taking longer than expected. If your card was charged, please contact us with your order reference — do not pay again until you hear from us.'
-                : "We weren't able to verify this payment with Paystack. No charge should have gone through. You can try again."}
+                : "We weren't able to verify this payment. No charge should have gone through. You can try again."}
             </p>
             <p className="font-body text-xs text-stone-400 mb-6">
               Order ref: <span className="font-semibold text-charcoal-800">NB-{id.slice(-6)}</span>

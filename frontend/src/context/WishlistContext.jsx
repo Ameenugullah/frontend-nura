@@ -1,9 +1,14 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const WishlistContext = createContext(null);
+const STORAGE_KEY = 'nb_wishlist';
+
+function loadWishlist() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
 
 export function WishlistProvider({ children }) {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(loadWishlist);
 
   const toggle = useCallback((product) => {
     setItems(prev =>
@@ -12,6 +17,10 @@ export function WishlistProvider({ children }) {
         : [...prev, product]
     );
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const isWishlisted = useCallback((id) => items.some(p => p.id === id), [items]);
 

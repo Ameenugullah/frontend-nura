@@ -79,15 +79,16 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (product.sizes?.length && product.sizes[0] !== 'One Size' && !size) {
-      setError('Please select a size'); return;
+      setError('Please select a size'); return false;
     }
     if (product.colors?.length && !color) {
-      setError('Please select a color'); return;
+      setError('Please select a color'); return false;
     }
     setError('');
     addToCart(product, size || 'One Size', color || '', qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+    return true;
   };
 
   return (
@@ -246,7 +247,7 @@ export default function ProductDetail() {
               </button>
             </div>
 
-            <button onClick={() => { handleAddToCart(); navigate('/cart'); }}
+            <button onClick={() => { if (handleAddToCart()) navigate('/cart'); }}
               disabled={!inStock}
               className="w-full py-3 mb-8 text-sm font-medium transition-all border font-body border-charcoal-900 text-charcoal-900 hover:bg-charcoal-900 hover:text-white disabled:opacity-40">
               Buy Now
@@ -254,7 +255,7 @@ export default function ProductDetail() {
 
             <div className="pt-5 space-y-3 border-t border-stone-200">
               {[
-                { icon: Truck,     text: 'Free delivery on orders over ₦500,000' },
+                { icon: Truck,     text: 'Free delivery in Kano over ₦200,000 · Nationwide over ₦300,000' },
                 { icon: RotateCcw, text: 'Returns accepted within 7 days' },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">

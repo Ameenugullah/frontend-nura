@@ -1,9 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const CartContext = createContext(null);
+const STORAGE_KEY = 'nb_cart';
+
+function loadCart() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(loadCart);
 
   const addToCart = useCallback((product, size = 'One Size', color = '', qty = 1) => {
     // unique key per product+size+color combo
@@ -28,6 +33,10 @@ export function CartProvider({ children }) {
     }
     setCartItems(prev => prev.map(i => i.key === key ? { ...i, quantity } : i));
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cartItems));
+  }, [cartItems]);
 
   const clearCart = useCallback(() => setCartItems([]), []);
 

@@ -60,7 +60,7 @@ export default function Products() {
   const [loadError,        setLoadError]        = useState(false);
   const [sort,             setSort]             = useState('default');
   const [showFilters,      setShowFilters]      = useState(false);
-  const [priceMax,         setPriceMax]         = useState(200000);
+  const [priceMax,         setPriceMax]         = useState(2000000);
 
   // Fetch all products once; filter client-side so casing mismatches never matter.
   useEffect(() => {
@@ -135,7 +135,7 @@ export default function Products() {
 
   const clearAll = () => {
     setSort('default');
-    setPriceMax(200000);
+    setPriceMax(2000000);
     setSearchParams({});
   };
 
@@ -230,11 +230,11 @@ export default function Products() {
               <label className="block mb-2 text-xs tracking-wider uppercase font-body text-stone-500">
                 Max Price: ₦{priceMax.toLocaleString('en-NG')}
               </label>
-              <input type="range" min={5000} max={200000} step={5000} value={priceMax}
+              <input type="range" min={5000} max={2000000} step={5000} value={priceMax}
                 onChange={e => setPriceMax(Number(e.target.value))}
                 className="w-full accent-blush-500" />
               <div className="flex justify-between font-body text-[10px] text-stone-400 mt-1">
-                <span>₦5,000</span><span>₦200,000</span>
+                <span>₦5,000</span><span>₦2,000,000</span>
               </div>
             </div>
           </div>

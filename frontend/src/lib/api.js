@@ -102,7 +102,7 @@ export async function getProducts(category, gender) {
     return items;
   } catch (err) {
     console.warn('getProducts failed:', err.message);
-    return [];
+    throw err;
   }
 }
 
@@ -347,9 +347,9 @@ function normalizeProduct(record) {
 }
 
 function normalizeOrder(record) {
-  return {
-    ...record,
-    items: typeof record.items === 'string' ? JSON.parse(record.items) : (record.items || []),
-  };
+  let items = record.items || [];
+  if (typeof record.items === 'string') {
+    try { items = JSON.parse(record.items); } catch { items = []; }
+  }
+  return { ...record, items };
 }
-# Wed Jul  1 20:12:43 WAT 2026

@@ -123,38 +123,48 @@ export default function Checkout() {
     setOrderId(newOrderId);
 
     if (method === 'online') {
-      initializePaystackPayment({
-        email:   form.email,
-        amount:  total,
-        orderId: newOrderId,
-        name:    form.customerName,
-        phone:   form.phone,
-        onPopupClosed: ({ cancelled }) => {
-          setLoading(false);
-          if (cancelled) {
-            setError("Payment was cancelled. You can try again whenever you're ready.");
-          } else {
-            navigate(`/order/${newOrderId}/verifying`);
-          }
-        },
-      });
+      try {
+        await initializePaystackPayment({
+          email:   form.email,
+          amount:  total,
+          orderId: newOrderId,
+          name:    form.customerName,
+          phone:   form.phone,
+          onPopupClosed: ({ cancelled }) => {
+            setLoading(false);
+            if (cancelled) {
+              setError("Payment was cancelled. You can try again whenever you're ready.");
+            } else {
+              navigate(`/order/${newOrderId}/verifying`);
+            }
+          },
+        });
+      } catch {
+        setLoading(false);
+        setError('Could not load the payment window. Please check your connection and try again.');
+      }
 
     } else if (method === 'moniepoint') {
-      initializeMoniepointPayment({
-        email:   form.email,
-        amount:  total,
-        orderId: newOrderId,
-        name:    form.customerName,
-        phone:   form.phone,
-        onDone: ({ cancelled }) => {
-          setLoading(false);
-          if (cancelled) {
-            setError("Payment was cancelled. You can try again whenever you're ready.");
-          } else {
-            navigate(`/order/${newOrderId}/verifying`);
-          }
-        },
-      });
+      try {
+        await initializeMoniepointPayment({
+          email:   form.email,
+          amount:  total,
+          orderId: newOrderId,
+          name:    form.customerName,
+          phone:   form.phone,
+          onDone: ({ cancelled }) => {
+            setLoading(false);
+            if (cancelled) {
+              setError("Payment was cancelled. You can try again whenever you're ready.");
+            } else {
+              navigate(`/order/${newOrderId}/verifying`);
+            }
+          },
+        });
+      } catch {
+        setLoading(false);
+        setError('Could not load the payment window. Please check your connection and try again.');
+      }
 
     } else {
       // WhatsApp
