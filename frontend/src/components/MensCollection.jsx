@@ -4,10 +4,6 @@ import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import ProductCard from './ProductCard';
 import { matchesGender } from '../lib/categories';
 
-// Receives the already-fetched, already-normalized product list from Home.jsx
-// (via lib/api.js -> getProducts()) so there is exactly one place in the app
-// that talks to PocketBase for the homepage. No separate fetch, no
-// hardcoded API URL, no Unsplash fallback.
 export default function MensCollection({ allProducts = [] }) {
   const scrollRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
@@ -37,8 +33,6 @@ export default function MensCollection({ allProducts = [] }) {
     el.scrollBy({ left: dir * ((card?.offsetWidth ?? 280) + 20), behavior: 'smooth' });
   };
 
-  // Don't render an empty section if there are no men's products yet —
-  // avoids a confusing blank gap on the homepage.
   if (menProducts.length === 0) return null;
 
   return (

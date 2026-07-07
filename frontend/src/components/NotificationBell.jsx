@@ -33,7 +33,6 @@ export default function NotificationBell() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // ── Load + subscribe ────────────────────────────────────────────────────────
   useEffect(() => {
     let unsub;
 
@@ -44,7 +43,6 @@ export default function NotificationBell() {
         });
         setNotifications(result.items.map(normalize));
       } catch {
-        // Not admin-authenticated or PB unreachable — show empty state
       } finally {
         setLoading(false);
       }
@@ -59,14 +57,13 @@ export default function NotificationBell() {
             setNotifications(prev => prev.filter(n => n.id !== e.record.id));
           }
         });
-      } catch { /* realtime unavailable */ }
+      } catch {}
     }
 
     init();
     return () => { unsub?.(); };
   }, []);
 
-  // ── Close on outside click ──────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false);
@@ -75,10 +72,9 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
   const markRead = useCallback(async (id, orderId) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    try { await pb.collection('notifications').update(id, { read: true }); } catch { /* best-effort */ }
+    try { await pb.collection('notifications').update(id, { read: true }); } catch {}
     if (orderId) { navigate('/admin/orders'); setOpen(false); }
   }, [navigate]);
 
@@ -96,7 +92,6 @@ export default function NotificationBell() {
     await Promise.allSettled(ids.map(id => pb.collection('notifications').delete(id)));
   }, [notifications]);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="relative" ref={panelRef}>
       <button
@@ -115,7 +110,6 @@ export default function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-11 w-80 sm:w-96 bg-white shadow-xl shadow-stone-900/10 border border-stone-200 z-50 max-h-[480px] flex flex-col">
 
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100 shrink-0">
             <div className="flex items-center gap-2">
               <Bell size={14} className="text-charcoal-800" />
@@ -142,7 +136,6 @@ export default function NotificationBell() {
             </div>
           </div>
 
-          {/* Body */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-12 gap-2">

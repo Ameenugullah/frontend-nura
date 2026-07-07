@@ -4,10 +4,6 @@ import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import ProductCard from './ProductCard';
 import { isFragrance } from '../lib/categories';
 
-// Fragrance is the 3rd main nav section (alongside Women / Men). It is not
-// gender-scoped — any product tagged Perfume or Incense shows here,
-// regardless of the "gender" field on the record. isFragrance() is the
-// single source of truth for which categories count as Fragrance.
 export default function FragrancesCollection({ allProducts = [] }) {
   const scrollRef = useRef(null);
   const [atStart, setAtStart] = useState(true);

@@ -6,12 +6,6 @@ import { useWishlist }  from '../context/WishlistContext';
 import { useAuth }  from '../context/AuthContext';
 import { NAV_SECTIONS } from '../lib/categories';
 
-// Build navbar links directly from the shared taxonomy in lib/categories.js.
-// This guarantees the Navbar can NEVER drift out of sync with Products.jsx
-// or the Admin product form again — there is exactly one source of truth.
-// Every section (Women, Men, Fragrance) now uses the same ?section=<key>
-// URL convention, so there's no special-casing between gender-scoped and
-// category-scoped nav items anymore.
 const navLinks = NAV_SECTIONS.map(section => ({
   label: section.label,
   href: `/products?section=${section.key}`,

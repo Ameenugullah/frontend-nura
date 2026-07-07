@@ -18,7 +18,6 @@ export default function ProductCard({ product }) {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Support both old API (add) and new API (addToCart)
     const fn = cart.addToCart || cart.add;
     if (typeof fn === 'function') {
       fn(product, product.sizes?.[0] || 'One Size', product.colors?.[0] || '', 1);

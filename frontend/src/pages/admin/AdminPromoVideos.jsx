@@ -57,7 +57,7 @@ export default function AdminPromoVideos() {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-light font-display text-charcoal-800">Promo Videos</h1>
@@ -71,7 +71,7 @@ export default function AdminPromoVideos() {
         </button>
       </div>
 
-      {/* Slot cards */}
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2].map(i => <div key={i} className="aspect-video bg-stone-200 animate-pulse" />)}
@@ -91,14 +91,14 @@ export default function AdminPromoVideos() {
         </div>
       )}
 
-      {/* Info bar */}
+
       <div className="p-4 bg-stone-50 border border-stone-200 space-y-1 text-xs font-body text-stone-500">
         <p><strong>Video 1</strong> plays first. <strong>Video 2</strong> follows and they alternate indefinitely.</p>
         <p>If only one video is uploaded it loops continuously.</p>
         <p>Supported formats: <strong>MP4, WebM, MOV</strong> · Max size per video: <strong>200 MB</strong></p>
       </div>
 
-      {/* Delete confirm modal */}
+
       {confirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-900/60">
           <div className="w-full max-w-sm p-6 text-center bg-white">

@@ -29,10 +29,10 @@ const heroSlides = [
 ];
 
 const perks = [
-  { icon: Truck,     label: 'Free Shipping',            sub: 'Kano ₦200k · Nationwide ₦300k' },
-  { icon: Lock,      label: 'Money Back Guarantee',    sub: 'Within 7 days' },
-  { icon: Star,      label: 'Online Support 24/7',     sub: 'We reply on WhatsApp' },
-  { icon: RotateCcw, label: 'Secure Payment',          sub: 'Paystack & bank transfer' },
+  { icon: Truck,     label: 'Free Shipping',         sub: 'Kano ₦200k · Nationwide ₦300k' },
+  { icon: Lock,      label: 'Money Back Guarantee',  sub: 'Within 7 days' },
+  { icon: Star,      label: 'Online Support 24/7',   sub: 'We reply on WhatsApp' },
+  { icon: RotateCcw, label: 'Secure Payment',        sub: 'Paystack & bank transfer' },
 ];
 
 const categoryBannersMeta = [
@@ -61,7 +61,6 @@ function useScrollReveal() {
   return ref;
 }
 
-// Fetch products ONCE for the entire page — shared by all sections
 function useAllProducts() {
   const [products, setProducts] = useState([]);
   useEffect(() => {
@@ -129,7 +128,6 @@ export default function Home() {
   return (
     <div ref={revealRef}>
 
-      {/* Hero */}
       <section className="relative h-screen min-h-[560px] max-h-[900px] overflow-hidden">
         <div className="absolute inset-0">
           <img
@@ -158,12 +156,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Perks bar */}
       <section className="py-5 bg-white border-y border-stone-200">
         <div className="px-6 mx-auto max-w-7xl">
-          {/* Mobile/tablet: auto-sliding single perk */}
           <PerksSlider />
-          {/* Desktop: horizontal row */}
           <div className="hidden sm:flex items-center justify-between gap-4 divide-x divide-stone-100">
             {perks.map(({ icon: Icon, label, sub }) => (
               <div key={label} className="flex items-center justify-center w-full gap-3 px-4 py-1">
@@ -178,7 +173,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Category banners */}
       <section className="px-6 py-8 mx-auto max-w-7xl animate-on-scroll">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {categoryBannersMeta.map((cat) => {
@@ -207,7 +201,6 @@ export default function Home() {
 
       <Ticker />
 
-      {/* New Season — reduced py-20 → py-10 to close the gap with New Arrivals */}
       <section className="px-6 py-10">
         <div className="mx-auto max-w-7xl">
           <div className="grid md:grid-cols-2 gap-0 items-stretch min-h-[480px]">
@@ -250,7 +243,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* New Arrivals — reduced py-16 → py-10 */}
       <section className="py-10 bg-stone-50">
         <div className="px-6 mx-auto max-w-7xl">
           <div className="mb-8 text-center animate-on-scroll">
@@ -267,7 +259,6 @@ export default function Home() {
         textClass="text-white/50"
       />
 
-      {/* Women's Picks */}
       <section className="py-16 bg-white">
         <div className="px-6 mx-auto max-w-7xl">
           <div className="mb-10 text-center animate-on-scroll">
@@ -284,7 +275,6 @@ export default function Home() {
       <MensCollection allProducts={allProducts} />
       <FragrancesCollection allProducts={allProducts} />
 
-      {/* Testimonials */}
       <section className="py-16 bg-charcoal-900">
         <div className="max-w-5xl px-6 mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
@@ -313,12 +303,44 @@ export default function Home() {
   );
 }
 
-// ── TestimonialCarousel — fixed: auto-slide + infinite loop ──────────────────
+function PerksSlider() {
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setIdx(i => (i + 1) % perks.length);
+    }, 1800);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="sm:hidden overflow-hidden h-10">
+      <div
+        className="flex will-change-transform"
+        style={{
+          transform: `translateX(-${idx * 100}%)`,
+          transition: 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)',
+        }}
+      >
+        {perks.map(({ icon: Icon, label, sub }) => (
+          <div key={label} className="min-w-full flex items-center justify-center gap-3">
+            <Icon size={20} className="text-charcoal-800 shrink-0" strokeWidth={1.5} />
+            <div>
+              <p className="text-xs font-semibold tracking-wide font-body text-charcoal-800">{label}</p>
+              <p className="text-xs font-body text-stone-400">{sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TestimonialCarousel({ testimonials }) {
-  const [idx, setIdx]       = useState(0);
-  const startX  = useRef(null);
-  const timerRef = useRef(null);
-  const count   = testimonials.length;
+  const [idx, setIdx]    = useState(0);
+  const startX           = useRef(null);
+  const timerRef         = useRef(null);
+  const count            = testimonials.length;
 
   const goTo = useCallback((i) => {
     setIdx(((i % count) + count) % count);
@@ -436,39 +458,6 @@ function FeaturedTabCarousel({ allProducts }) {
         </div>
       )}
     </>
-  );
-}
-
-function PerksSlider() {
-  const [idx, setIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setIdx(i => (i + 1) % perks.length);
-        setVisible(true);
-      }, 300);
-    }, 1800);
-    return () => clearInterval(t);
-  }, []);
-
-  const { icon: Icon, label, sub } = perks[idx];
-
-  return (
-    <div className="flex sm:hidden items-center justify-center gap-3 py-1 h-10">
-      <div
-        className="flex items-center gap-3 transition-opacity duration-300"
-        style={{ opacity: visible ? 1 : 0 }}
-      >
-        <Icon size={20} className="text-charcoal-800 shrink-0" strokeWidth={1.5} />
-        <div>
-          <p className="text-xs font-semibold tracking-wide font-body text-charcoal-800">{label}</p>
-          <p className="text-xs font-body text-stone-400">{sub}</p>
-        </div>
-      </div>
-    </div>
   );
 }
 

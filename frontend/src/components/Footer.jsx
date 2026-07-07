@@ -53,7 +53,7 @@ export default function Footer() {
   return (
     <footer className="bg-charcoal-900 text-stone-200">
 
-      {/* Newsletter */}
+
       <div className="py-10 border-b border-white/10">
         <div className="flex flex-col items-center justify-between gap-6 px-6 mx-auto max-w-7xl sm:flex-row">
           <div className="text-center sm:text-left">
@@ -83,10 +83,10 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Main grid */}
+
       <div className="grid grid-cols-1 gap-10 px-6 mx-auto max-w-7xl py-14 sm:grid-cols-2 lg:grid-cols-4">
 
-        {/* Brand */}
+
         <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
           <span className="block mb-4 text-3xl text-white font-script">Nura Bahar</span>
           <p className="mb-6 text-sm leading-relaxed font-body text-stone-400">
@@ -103,7 +103,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Quick links */}
+
         <div className="text-center sm:text-left">
           <h4 className="font-body text-[10px] tracking-[0.2em] uppercase text-stone-500 mb-5">Quick Links</h4>
           <ul className="space-y-3">
@@ -119,7 +119,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Categories */}
+
         <div className="text-center sm:text-left">
           <h4 className="font-body text-[10px] tracking-[0.2em] uppercase text-stone-500 mb-5">Categories</h4>
           <ul className="space-y-3">
@@ -135,7 +135,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Contact */}
+
         <div className="text-center sm:text-left">
           <h4 className="font-body text-[10px] tracking-[0.2em] uppercase text-stone-500 mb-5">Contact Us</h4>
           <ul className="space-y-3 text-sm font-body text-stone-400">
@@ -157,7 +157,7 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
+
       <div className="border-t border-white/10">
         <div className="flex flex-col items-center justify-between gap-4 px-6 py-5 mx-auto text-center max-w-7xl sm:flex-row sm:text-left">
           <p className="text-xs font-body text-stone-500">

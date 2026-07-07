@@ -41,7 +41,6 @@ export default function PromoVideoShowcase() {
           <h2 className="text-3xl italic font-light font-display sm:text-4xl text-charcoal-800">In Motion</h2>
         </div>
 
-        {/* Video container — 16:9, both videos stacked in DOM for zero-gap fade */}
         <div className="relative overflow-hidden w-full h-[70vh] bg-stone-900 shadow-soft">
           {videos.map((v, i) => (
             <video
@@ -61,7 +60,6 @@ export default function PromoVideoShowcase() {
           ))}
         </div>
 
-        {/* Dot indicators — only when two videos exist */}
         {!isSingle && (
           <div className="flex justify-center gap-2 mt-5">
             {videos.map((_, i) => (

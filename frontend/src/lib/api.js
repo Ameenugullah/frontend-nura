@@ -1,12 +1,10 @@
 import pb from './pocketbase';
 import { normalize } from './categories';
 
-// ── In-memory cache for products (avoids repeated fetches on the same page) ──
 let _productsCache    = null;
 let _productsCacheTs  = 0;
 const CACHE_TTL_MS    = 60_000; // 1 minute
 
-// ── HEALTH ────────────────────────────────────────────────────────────────────
 export async function checkPBHealth() {
   try {
     const res = await fetch(`${pb.baseUrl}/api/health`, {
@@ -18,7 +16,6 @@ export async function checkPBHealth() {
   }
 }
 
-// ── AUTH (customer) ───────────────────────────────────────────────────────────
 export async function signUp(email, password, name) {
   const record = await pb.collection('users').create({
     email, password, passwordConfirm: password, name,
@@ -47,7 +44,6 @@ export async function confirmPasswordReset(token, password) {
   await pb.collection('users').confirmPasswordReset(token, password, password);
 }
 
-// ── ADMIN AUTH ─────────────────────────────────────────────────────────────────
 export async function adminLogin(email, password) {
   try {
     await pb.collection('_superusers').authWithPassword(email, password);
@@ -65,7 +61,6 @@ export function isAdminLoggedIn() {
   return pb.authStore.isValid && pb.authStore.record?.collectionName === '_superusers';
 }
 
-// ── PRODUCTS ──────────────────────────────────────────────────────────────────
 export async function getProducts(category, gender) {
   // Return cached result if fresh (and no specific filter is requested)
   const noFilter = (!category || normalize(category) === 'all') &&
@@ -106,7 +101,6 @@ export async function getProducts(category, gender) {
   }
 }
 
-// Invalidate cache after create/update/delete
 export function invalidateProductsCache() {
   _productsCache   = null;
   _productsCacheTs = 0;
@@ -154,7 +148,6 @@ export async function updateStock(id, stock) {
   invalidateProductsCache();
 }
 
-// ── ORDERS ────────────────────────────────────────────────────────────────────
 export async function createOrder(data) {
   const record = await pb.collection('orders').create({
     customerName:   data.customerName,
@@ -221,7 +214,6 @@ export async function deleteOrder(id) {
   await pb.collection('orders').delete(id);
 }
 
-// ── PAYMENT POLLING ──────────────────────────────────────────────────────────
 export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeoutMs = 60000 } = {}) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -269,7 +261,6 @@ export async function decrementStock(id, quantity) {
   } catch { /* best-effort */ }
 }
 
-// ── USERS ─────────────────────────────────────────────────────────────────────
 export async function getUsers() {
   try {
     return await pb.collection('users').getFullList({ });
@@ -278,7 +269,6 @@ export async function getUsers() {
   }
 }
 
-// ── NEWSLETTER ────────────────────────────────────────────────────────────────
 export async function subscribeNewsletter(email) {
   try {
     await pb.collection('newsletter').create({ email });
@@ -289,7 +279,6 @@ export async function subscribeNewsletter(email) {
   }
 }
 
-// ── NOTIFICATIONS (admin-only) ────────────────────────────────────────────────
 export async function getNotifications() {
   try {
     const result = await pb.collection('notifications').getList(1, 50, { sort: '-created' });
@@ -307,7 +296,6 @@ export async function deleteNotification(id) {
   return pb.collection('notifications').delete(id);
 }
 
-// ── PROMO VIDEOS ──────────────────────────────────────────────────────────────
 export async function getPromoVideos() {
   try {
     const records = await pb.collection('promo_videos').getFullList({ sort: 'slot' });
@@ -336,7 +324,6 @@ export async function deletePromoVideo(id) {
   await pb.collection('promo_videos').delete(id);
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
 function buildProductFormData(data) {
   const fd = new FormData();
   fd.append('name',        data.name);
