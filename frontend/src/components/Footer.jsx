@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Twitter, Facebook, ArrowRight } from 'lucide-react';
+import { Instagram, Twitter, ArrowRight } from 'lucide-react';
 import { subscribeNewsletter } from '../lib/api';
 import { NAV_SECTIONS } from '../lib/categories';
 
@@ -26,7 +26,6 @@ const categoryLinks = NAV_SECTIONS.map(s => ({
 }));
 
 const socials = [
-  { icon: Facebook,  href: 'https://facebook.com/nurabaharng',              label: 'Facebook' },
   { icon: Twitter,   href: 'https://twitter.com/nurabaharng',               label: 'Twitter' },
   { icon: Instagram, href: 'https://www.instagram.com/nura_bahar.ng',       label: 'Instagram' },
   { icon: TikTokIcon,href: 'https://www.tiktok.com/@nura_bahar.ng',         label: 'TikTok' },
