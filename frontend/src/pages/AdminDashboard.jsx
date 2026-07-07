@@ -9,7 +9,7 @@ import DashboardHome         from './admin/DashboardHome';
 import AdminProducts         from './admin/AdminProducts';
 import AdminOrders           from './admin/AdminOrders';
 import AdminCustomers        from './admin/AdminCustomers';
-import AdminInstagramGrid    from './admin/AdminInstagramGrid';
+import AdminPromoVideos      from './admin/AdminPromoVideos';
 
 export default function AdminDashboard() {
   const { isAdminLoggedIn } = useAdmin();
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
             <Route path="products"  element={<AdminProducts />} />
             <Route path="orders"    element={<AdminOrders />} />
             <Route path="customers" element={<AdminCustomers />} />
-            <Route path="instagram" element={<AdminInstagramGrid />} />
+            <Route path="promo-videos" element={<AdminPromoVideos />} />
             <Route path="*" element={
               <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <p className="font-body text-[10px] tracking-[0.3em] uppercase text-blush-500">404</p>

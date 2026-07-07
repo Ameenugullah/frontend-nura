@@ -307,58 +307,33 @@ export async function deleteNotification(id) {
   return pb.collection('notifications').delete(id);
 }
 
-// ── INSTAGRAM GRID ────────────────────────────────────────────────────────────
-export async function getInstagramPosts() {
+// ── PROMO VIDEOS ──────────────────────────────────────────────────────────────
+export async function getPromoVideos() {
   try {
-    const records = await pb.collection('instagram_grid').getList(1, 6, {
-      sort:       'sort_order',
-      requestKey: null,
-    });
-    return (records.items || []).map(r => ({
-      id:         r.id,
-      mediaType:  r.media_type || 'image',
-      image:      r.image ? pb.baseUrl + '/api/files/' + r.collectionId + '/' + r.id + '/' + r.image : null,
-      video:      r.video ? pb.baseUrl + '/api/files/' + r.collectionId + '/' + r.id + '/' + r.video : null,
-      caption:    r.caption    || '',
-      link:       r.link       || '',
-      sort_order: r.sort_order || 0,
+    const records = await pb.collection('promo_videos').getFullList({ sort: 'slot' });
+    return records.map(r => ({
+      id:    r.id,
+      slot:  r.slot,
+      title: r.title || '',
+      video: r.video ? pb.baseUrl + '/api/files/' + r.collectionId + '/' + r.id + '/' + r.video : null,
     }));
   } catch (err) {
-    console.warn('getInstagramPosts failed:', err.message);
+    console.warn('getPromoVideos failed:', err.message);
     return [];
   }
 }
 
-export async function createInstagramPost(data) {
+export async function savePromoVideo(id, slot, file, title) {
   const fd = new FormData();
-  fd.append('caption',    data.caption   || '');
-  fd.append('media_type', data.mediaType || 'image');
-  if (data.link?.trim()) fd.append('link', data.link.trim());
-  if (data.sort_order)   fd.append('sort_order', String(Number(data.sort_order)));
-  if (data.mediaType === 'video' && data.videoFile) {
-    fd.append('video', data.videoFile);
-  } else if (data.imageFile) {
-    fd.append('image', data.imageFile);
-  }
-  return pb.collection('instagram_grid').create(fd);
+  fd.append('slot', String(slot));
+  if (title) fd.append('title', title);
+  if (file)  fd.append('video', file);
+  if (id) return pb.collection('promo_videos').update(id, fd);
+  return pb.collection('promo_videos').create(fd);
 }
 
-export async function updateInstagramPost(id, data) {
-  const fd = new FormData();
-  fd.append('caption',    data.caption   || '');
-  fd.append('media_type', data.mediaType || 'image');
-  fd.append('link', data.link ? data.link.trim() : '');
-  if (data.sort_order) fd.append('sort_order', String(Number(data.sort_order)));
-  if (data.mediaType === 'video' && data.videoFile) {
-    fd.append('video', data.videoFile);
-  } else if (data.imageFile) {
-    fd.append('image', data.imageFile);
-  }
-  return pb.collection('instagram_grid').update(id, fd);
-}
-
-export async function deleteInstagramPost(id) {
-  await pb.collection('instagram_grid').delete(id);
+export async function deletePromoVideo(id) {
+  await pb.collection('promo_videos').delete(id);
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────

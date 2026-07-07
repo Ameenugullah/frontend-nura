@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
-  Settings, LogOut, Wifi, WifiOff, Instagram, X,
+  Settings, LogOut, Wifi, WifiOff, Video, X,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 
@@ -12,7 +12,7 @@ const adminNav = [
   { label: 'Products',       icon: Package,          to: '/admin/products' },
   { label: 'Orders',         icon: ShoppingCart,     to: '/admin/orders' },
   { label: 'Customers',      icon: Users,            to: '/admin/customers' },
-  { label: 'Instagram Grid', icon: Instagram,        to: '/admin/instagram' },
+  { label: 'Promo Videos',   icon: Video,            to: '/admin/promo-videos' },
 ];
 
 export default function AdminSidebar({ mobile, onClose }) {
