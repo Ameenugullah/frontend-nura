@@ -4,11 +4,10 @@ migrate(function(app) {
   var existing = collection.fields.getByName("paymentMethod");
   if (existing && existing.type !== "text") {
     collection.fields.removeByName("paymentMethod");
-    collection.fields.add({
-      type:     "text",
+    collection.fields.add(new TextField({
       name:     "paymentMethod",
       required: false,
-    });
+    }));
     app.save(collection);
   }
 }, function(app) {
