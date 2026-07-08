@@ -12,9 +12,7 @@ migrate(function(app) {
     }
 
     app.save(orders);
-    $app.logger().info("Migration 004: paymentMethod field converted to text");
   } catch (err) {
-    $app.logger().error("Migration 004 failed", "error", String(err));
     throw err;
   }
 }, function(app) {
