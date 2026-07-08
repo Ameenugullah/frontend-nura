@@ -1,20 +1,16 @@
 migrate(function(app) {
-  try {
-    var orders = app.findCollectionByNameOrId("orders");
+  var collection = app.findCollectionByNameOrId("orders");
 
-    var fields = orders.fields;
-    for (var i = 0; i < fields.length; i++) {
-      if (fields[i].name === "paymentMethod") {
-        fields[i].type    = "text";
-        fields[i].options = {};
-        break;
-      }
-    }
-
-    app.save(orders);
-  } catch (err) {
-    throw err;
+  var existing = collection.fields.getByName("paymentMethod");
+  if (existing && existing.type !== "text") {
+    collection.fields.removeByName("paymentMethod");
+    collection.fields.add({
+      type:     "text",
+      name:     "paymentMethod",
+      required: false,
+    });
+    app.save(collection);
   }
 }, function(app) {
-  // no rollback needed
+  // no rollback
 });
