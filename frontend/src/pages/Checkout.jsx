@@ -101,7 +101,8 @@ export default function Checkout() {
       });
       newOrderId = record.id;
       cartItems.forEach(i => decrementStock(i.id, i.quantity));
-    } catch {
+    } catch (err) {
+      console.error('Order create failed:', err?.data || err);
       setLoading(false);
       setError('Could not create your order. Please check your connection and try again.');
       return;

@@ -42,7 +42,8 @@ export default function NotificationBell() {
           sort: '-created',
         });
         setNotifications(result.items.map(normalize));
-      } catch {
+      } catch (err) {
+        console.error('Failed to load notifications:', err?.data || err);
       } finally {
         setLoading(false);
       }
