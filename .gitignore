@@ -7,4 +7,5 @@
 *.zip
 pb_run.log
 node_modules/
+.env
 frontend/.env
