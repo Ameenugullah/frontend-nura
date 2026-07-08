@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CreditCard, ChevronRight, Lock, Truck, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { createOrder, decrementStock } from '../lib/api';
+import { createOrder, decrementStock, verifyPayment } from '../lib/api';
 import { initializePaystackPayment } from '../lib/paystack';
 import { PAYMENT_METHODS, DELIVERY_METHODS, SHIPPING } from '../lib/orderConstants';
 
@@ -115,14 +115,25 @@ export default function Checkout() {
         orderId: newOrderId,
         name:    form.customerName,
         phone:   form.phone,
-        onPopupClosed: ({ cancelled }) => {
-          setLoading(false);
+        onPopupClosed: async ({ cancelled, reference }) => {
           if (cancelled) {
+            setLoading(false);
             setError("Payment was cancelled. Your order is saved — you can try again whenever you're ready.");
-          } else {
-            clearCart();
-            navigate(`/order/${newOrderId}/verifying`);
+            return;
           }
+          // Best-effort: ask the backend to verify with Paystack right away so the
+          // verifying page can show "paid" instantly. If this call fails (network
+          // blip, cold start, etc.) we still navigate — the verifying page's own
+          // bounded polling (and the Paystack webhook, if configured) can resolve
+          // the order later.
+          try {
+            await verifyPayment(newOrderId, reference);
+          } catch (err) {
+            console.error('verifyPayment call failed, falling back to polling:', err);
+          }
+          setLoading(false);
+          clearCart();
+          navigate(`/order/${newOrderId}/verifying`);
         },
       });
     } catch {

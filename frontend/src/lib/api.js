@@ -231,6 +231,16 @@ export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeo
   throw new Error('Payment verification timed out. Please contact support with your order reference.');
 }
 
+export async function verifyPayment(orderId, reference) {
+  const res = await fetch(pb.baseUrl + '/api/verify-payment', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ orderId, reference }),
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
 export async function getOrdersByEmail(email) {
   try {
     const params = new URLSearchParams();
