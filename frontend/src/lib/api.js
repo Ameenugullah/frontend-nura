@@ -1,6 +1,5 @@
 import pb from './pocketbase';
 import { normalize } from './categories';
-import { PAYMENT_METHODS } from './orderConstants';
 
 let _productsCache    = null;
 let _productsCacheTs  = 0;
@@ -163,7 +162,6 @@ export async function createOrder(data) {
     shipping:       data.shipping,
     tax:            data.tax            || 0,
     total:          data.total,
-    paymentMethod:  data.paymentMethod  || PAYMENT_METHODS.PAYSTACK,
     paymentRef:     data.paymentRef     || '',
     paymentStatus:  'unpaid',
     status:         'pending',
@@ -221,8 +219,8 @@ export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeo
     try {
       const order = await getOrderById(orderId);
       if (order.paymentStatus === 'paid' || order.paymentStatus === 'failed') return order;
-    } catch {
-      // keep polling
+    } catch (err) {
+      if (err.message.includes('404')) throw new Error('Order not found. Please contact support with your payment reference.');
     }
     await new Promise(r => setTimeout(r, intervalMs));
   }
