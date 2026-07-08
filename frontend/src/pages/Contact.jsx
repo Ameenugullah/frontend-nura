@@ -95,7 +95,6 @@ export default function Contact() {
                 <div>
                   <p className="mb-1 text-xs tracking-wider uppercase font-body text-stone-400">Opening Hours</p>
                   <p className="text-sm font-body text-charcoal-700">Mon – Sat: 9:00 AM – 6:00 PM WAT</p>
-                  <p className="font-body text-xs text-stone-400 mt-0.5">WhatsApp orders accepted anytime</p>
                 </div>
               </li>
             </ul>

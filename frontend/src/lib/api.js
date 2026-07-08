@@ -162,6 +162,7 @@ export async function createOrder(data) {
     shipping:       data.shipping,
     tax:            data.tax            || 0,
     total:          data.total,
+    paymentMethod:  data.paymentMethod  || 'paystack',
     paymentRef:     data.paymentRef     || '',
     paymentStatus:  'unpaid',
     status:         'pending',
@@ -213,14 +214,15 @@ export async function deleteOrder(id) {
   await pb.collection('orders').delete(id);
 }
 
-export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeoutMs = 60000 } = {}) {
+export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeoutMs = 90000 } = {}) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const order = await getOrderById(orderId);
-      if (order.paymentStatus === 'paid' || order.paymentStatus === 'failed') return order;
-    } catch (err) {
-      if (err.message.includes('404')) throw new Error('Order not found. Please contact support with your payment reference.');
+      if (order && (order.paymentStatus === 'paid' || order.paymentStatus === 'failed')) return order;
+    } catch {
+      // PocketBase returns 404 when viewRule denies access (unauthenticated request),
+      // not only when the record is missing — keep polling until timeout.
     }
     await new Promise(r => setTimeout(r, intervalMs));
   }

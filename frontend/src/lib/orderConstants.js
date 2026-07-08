@@ -16,9 +16,10 @@ export const ORDER_STATUSES = {
 export const ALL_ORDER_STATUSES = Object.values(ORDER_STATUSES);
 
 export const PAYMENT_STATUSES = {
-  UNPAID: 'unpaid',
-  PAID:   'paid',
-  FAILED: 'failed',
+  UNPAID:     'unpaid',
+  VERIFYING:  'verifying',
+  PAID:       'paid',
+  FAILED:     'failed',
 };
 
 export const DELIVERY_METHODS = {
