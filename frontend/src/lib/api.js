@@ -112,7 +112,8 @@ export async function getProductById(id) {
     const res = await fetch(url);
     if (!res.ok) return null;
     return normalizeProduct(await res.json());
-  } catch {
+  } catch (err) {
+    console.warn('getProductById failed:', err.message);
     return null;
   }
 }
@@ -221,9 +222,10 @@ export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeo
     try {
       const order = await getOrderById(orderId);
       if (order && (order.paymentStatus === 'paid' || order.paymentStatus === 'failed')) return order;
-    } catch {
+    } catch (err) {
       // PocketBase returns 404 when viewRule denies access (unauthenticated request),
       // not only when the record is missing — keep polling until timeout.
+      console.warn('pollOrderPaymentStatus attempt failed:', err?.message || err);
     }
     if (signal?.aborted) return null;
     await new Promise(r => setTimeout(r, intervalMs));
@@ -270,13 +272,16 @@ export async function decrementStock(id, quantity) {
     const newStock = Math.max(0, Number(product.stock || 0) - Number(quantity));
     await pb.collection('products').update(id, { stock: newStock });
     invalidateProductsCache();
-  } catch { /* best-effort */ }
+  } catch (err) {
+    console.error('decrementStock failed:', err?.data || err);
+  }
 }
 
 export async function getUsers() {
   try {
     return await pb.collection('users').getFullList({ });
-  } catch {
+  } catch (err) {
+    console.warn('getUsers failed:', err?.data || err);
     return [];
   }
 }

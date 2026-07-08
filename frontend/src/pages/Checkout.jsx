@@ -136,7 +136,8 @@ export default function Checkout() {
           navigate(`/order/${newOrderId}/verifying`);
         },
       });
-    } catch {
+    } catch (err) {
+      console.error('Paystack popup failed to load:', err);
       setLoading(false);
       setError('Could not load the payment window. Please check your connection and try again.');
     }

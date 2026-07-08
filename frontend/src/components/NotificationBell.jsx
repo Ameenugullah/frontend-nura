@@ -58,7 +58,9 @@ export default function NotificationBell() {
             setNotifications(prev => prev.filter(n => n.id !== e.record.id));
           }
         });
-      } catch {}
+      } catch (err) {
+        console.error('Notifications realtime subscribe failed:', err);
+      }
     }
 
     init();
@@ -75,7 +77,9 @@ export default function NotificationBell() {
 
   const markRead = useCallback(async (id, orderId) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    try { await pb.collection('notifications').update(id, { read: true }); } catch {}
+    try { await pb.collection('notifications').update(id, { read: true }); } catch (err) {
+      console.error('markRead failed:', err?.data || err);
+    }
     if (orderId) { navigate('/admin/orders'); setOpen(false); }
   }, [navigate]);
 
