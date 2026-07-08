@@ -214,9 +214,10 @@ export async function deleteOrder(id) {
   await pb.collection('orders').delete(id);
 }
 
-export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeoutMs = 90000 } = {}) {
+export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeoutMs = 90000, signal } = {}) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
+    if (signal?.aborted) return null;
     try {
       const order = await getOrderById(orderId);
       if (order && (order.paymentStatus === 'paid' || order.paymentStatus === 'failed')) return order;
@@ -224,6 +225,7 @@ export async function pollOrderPaymentStatus(orderId, { intervalMs = 2000, timeo
       // PocketBase returns 404 when viewRule denies access (unauthenticated request),
       // not only when the record is missing — keep polling until timeout.
     }
+    if (signal?.aborted) return null;
     await new Promise(r => setTimeout(r, intervalMs));
   }
   throw new Error('Payment verification timed out. Please contact support with your order reference.');
@@ -281,7 +283,7 @@ export async function subscribeNewsletter(email) {
 
 export async function getNotifications() {
   try {
-    const result = await pb.collection('notifications').getList(1, 50, { sort: '-created' });
+    const result = await pb.collection('notifications').getList(1, 50, {});
     return result.items;
   } catch {
     return [];

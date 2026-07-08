@@ -13,12 +13,21 @@ export default function OrderVerifying() {
   const cartClearedRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
+    // Reset to verifying state whenever the order ID changes (e.g. after a retry
+    // creates a new order). This also ensures the displayed order ref updates.
+    setState('verifying');
+    setOrder(null);
+
+    const controller = new AbortController();
 
     async function run() {
       try {
-        const result = await pollOrderPaymentStatus(id, { intervalMs: 2000, timeoutMs: 90000 });
-        if (cancelled) return;
+        const result = await pollOrderPaymentStatus(id, {
+          intervalMs: 2000,
+          timeoutMs: 90000,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted || !result) return;
         setOrder(result);
         if (result.paymentStatus === 'paid') {
           setState('paid');
@@ -30,16 +39,19 @@ export default function OrderVerifying() {
           setState('failed');
         }
       } catch {
-        if (!cancelled) setState('timeout');
+        if (controller.signal.aborted) return;
+        setState('timeout');
         try {
           const fallback = await getOrderById(id);
-          if (!cancelled) setOrder(fallback);
+          if (!controller.signal.aborted) setOrder(fallback);
         } catch { /* ignore */ }
       }
     }
 
     run();
-    return () => { cancelled = true; };
+    // Aborting the controller stops the poll loop immediately — no zombie requests
+    // for stale order IDs after a retry navigates to a new /order/:id/verifying URL.
+    return () => { controller.abort(); };
   }, [id, clearCart]);
 
   return (
