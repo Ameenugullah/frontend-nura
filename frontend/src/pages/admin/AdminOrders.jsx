@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Eye, Trash2, Search, RefreshCw, X } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import StatusBadge from '../../components/admin/StatusBadge';
+import { ALL_ORDER_STATUSES } from '../../lib/orderConstants';
 
-const ALL_STATUSES = ['pending','processing','paid','shipped','delivered','cancelled','failed','refunded'];
+const ALL_STATUSES = ALL_ORDER_STATUSES;
 
 export default function AdminOrders() {
   const { orders, changeOrderStatus, deleteOrder, refreshOrders, loading } = useAdmin();

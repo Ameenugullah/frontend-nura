@@ -1,22 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// ─────────────────────────────────────────────────────────────────────────────
-// pb_hooks/payments.pb.js — Webhook handler for Paystack
-//
-// Required env var (set in Railway → divine-gratitude → Variables):
-//   PAYSTACK_SECRET_KEY  — sk_live_xxx  from Paystack dashboard
-//
-// Security model:
-//   1. HMAC-SHA512 signature verified before any action.
-//   2. updateOrderPayment is idempotent — duplicate webhooks are no-ops.
-//   3. Email and notification are called directly here (not via onRecord* hooks)
-//      so they fire exactly once, only after a verified successful payment.
-//   4. The frontend never marks orders as paid.
-//
-// Note: emails.pb.js is loaded before this file (alphabetical order) so
-// sendOrderConfirmationEmail() is already defined when this file runs.
-// ─────────────────────────────────────────────────────────────────────────────
-
 routerAdd("POST", "/api/pb-hooks/paystack-webhook", function(e) {
   var secret = $os.getenv("PAYSTACK_SECRET_KEY");
   if (!secret) {
@@ -55,20 +38,17 @@ routerAdd("POST", "/api/pb-hooks/paystack-webhook", function(e) {
   return e.json(200, { status: "ok" });
 });
 
-// ── Payment updater ───────────────────────────────────────────────────────────
 function updateOrderPayment(orderId, paymentStatus, reference) {
   var order;
   try {
     order = $app.findRecordById("orders", orderId);
-  } catch (_) {
-    $app.logger().warn("Webhook: order not found", "orderId", orderId);
+  } catch (err) {
+    $app.logger().warn("Webhook: order not found", "orderId", orderId, "error", String(err));
     return;
   }
 
-  // Idempotency guard — safe against Paystack duplicate webhook delivery
   if (order.getString("paymentStatus") === paymentStatus) {
-    $app.logger().info("Webhook: order already in target state, skipped",
-      "orderId", orderId, "status", paymentStatus);
+    $app.logger().info("Webhook: already in target state, skipped", "orderId", orderId, "status", paymentStatus);
     return;
   }
 
@@ -80,20 +60,18 @@ function updateOrderPayment(orderId, paymentStatus, reference) {
 
   try {
     $app.save(order);
-    $app.logger().info("Order updated", "orderId", orderId, "status", paymentStatus);
+    $app.logger().info("Order updated", "orderId", orderId, "paymentStatus", paymentStatus);
   } catch (err) {
     $app.logger().error("Failed to save order", "orderId", orderId, "error", String(err));
     return;
   }
 
   if (paymentStatus === "paid") {
-    // Call directly — not via hook — guarantees exactly-once delivery
     createOrderNotification(order);
-    sendOrderConfirmationEmail(order); // defined in emails.pb.js (loads first)
+    sendOrderConfirmationEmail(order);
   }
 }
 
-// ── Notification writer ───────────────────────────────────────────────────────
 function createOrderNotification(order) {
   try {
     var col = $app.findCollectionByNameOrId("notifications");
@@ -108,7 +86,6 @@ function createOrderNotification(order) {
     $app.save(rec);
     $app.logger().info("Notification created", "orderId", order.id);
   } catch (err) {
-    // Non-fatal — payment confirmation must not depend on notification success
     $app.logger().error("Failed to create notification", "orderId", order.id, "error", String(err));
   }
 }

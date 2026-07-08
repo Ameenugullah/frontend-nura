@@ -1,21 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// ─────────────────────────────────────────────────────────────────────────────
-// pb_hooks/emails.pb.js — Order confirmation email builder
-//
-// This file only defines sendOrderConfirmationEmail(record).
-// It is called directly by payments.pb.js after a verified Paystack payment —
-// NOT via an onRecord* hook — so email is guaranteed to fire exactly once
-// per payment and never on unrelated order updates.
-//
-// Configure SMTP in PocketBase Admin UI → Settings → Mail Settings:
-//   Host:     smtp.mail.yahoo.com
-//   Port:     587
-//   Username: Nuraarabi@yahoo.com
-//   Password: <app password from Yahoo account security>
-//   From:     Nuraarabi@yahoo.com
-// ─────────────────────────────────────────────────────────────────────────────
-
 function sendOrderConfirmationEmail(record) {
   const BUSINESS_EMAIL = "Nuraarabi@yahoo.com";
   const SITE_URL       = $os.getenv("VITE_SITE_URL") || "https://frontend-nura-production.up.railway.app";
@@ -23,16 +7,16 @@ function sendOrderConfirmationEmail(record) {
   let items = [];
   try { items = JSON.parse(record.getString("items") || "[]"); } catch (_) {}
 
-  const orderId  = record.id;
-  const orderRef = "NB-" + orderId.slice(-6).toUpperCase();
+  const orderId   = record.id;
+  const orderRef  = "NB-" + orderId.slice(-6).toUpperCase();
   const createdAt = new Date().toLocaleString("en-NG", {
     dateStyle: "full", timeStyle: "short", timeZone: "Africa/Lagos",
   });
 
   const isPickup = record.getString("address") === "STORE PICKUP";
-  const shipping  = Number(record.getFloat("shipping") || 0);
-  const subtotal  = Number(record.getFloat("subtotal")  || 0);
-  const total     = Number(record.getFloat("total")     || 0);
+  const shipping = Number(record.getFloat("shipping") || 0);
+  const subtotal = Number(record.getFloat("subtotal") || 0);
+  const total    = Number(record.getFloat("total")    || 0);
 
   const d = {
     orderRef,
@@ -68,9 +52,6 @@ function sendOrderConfirmationEmail(record) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HTML template
-// ─────────────────────────────────────────────────────────────────────────────
 function buildHtmlEmail(d) {
   var itemRows = d.items.map(function(i) {
     var variant = [i.color, i.size && i.size !== "One Size" ? i.size : ""]
@@ -161,9 +142,6 @@ function buildHtmlEmail(d) {
   "</body></html>";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Plain-text fallback
-// ─────────────────────────────────────────────────────────────────────────────
 function buildPlainEmail(d) {
   var sep = "────────────────────────────────────────────────";
   var itemLines = d.items.map(function(i) {
@@ -203,7 +181,6 @@ function buildPlainEmail(d) {
   ].join("\n");
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 function escHtml(str) {
   return String(str || "")
     .replace(/&/g, "&amp;")

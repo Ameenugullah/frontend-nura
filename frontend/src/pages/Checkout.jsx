@@ -4,6 +4,7 @@ import { CreditCard, ChevronRight, Lock, Truck, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createOrder, decrementStock } from '../lib/api';
 import { initializePaystackPayment } from '../lib/paystack';
+import { PAYMENT_METHODS, DELIVERY_METHODS, SHIPPING } from '../lib/orderConstants';
 
 const STATES = [
   'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno','Cross River',
@@ -14,33 +15,27 @@ const STATES = [
 
 const STEPS = ['Delivery', 'Pay'];
 
-// ── Shipping logic ────────────────────────────────────────────────────────────
-// Store Pickup      → always ₦0
-// Kano state        → free if subtotal ≥ ₦200,000  else ₦2,500
-// Rest of Nigeria   → free if subtotal ≥ ₦300,000  else ₦2,500
-const FLAT_RATE              = 2_500;
-const KANO_FREE_THRESHOLD    = 200_000;
-const NIGERIA_FREE_THRESHOLD = 300_000;
-
 function calcShipping(deliveryMethod, state, subtotal) {
-  if (deliveryMethod === 'pickup') return 0;
+  if (deliveryMethod === DELIVERY_METHODS.PICKUP) return 0;
   const isKano = state?.toLowerCase() === 'kano';
-  return subtotal >= (isKano ? KANO_FREE_THRESHOLD : NIGERIA_FREE_THRESHOLD) ? 0 : FLAT_RATE;
+  return subtotal >= (isKano ? SHIPPING.KANO_FREE_THRESHOLD : SHIPPING.NIGERIA_FREE_THRESHOLD)
+    ? 0
+    : SHIPPING.FLAT_RATE;
 }
 
 function shippingLabel(deliveryMethod, state, subtotal) {
-  if (deliveryMethod === 'pickup') return 'Store Pickup — Free';
+  if (deliveryMethod === DELIVERY_METHODS.PICKUP) return 'Store Pickup — Free';
   const isKano    = state?.toLowerCase() === 'kano';
-  const threshold = isKano ? KANO_FREE_THRESHOLD : NIGERIA_FREE_THRESHOLD;
+  const threshold = isKano ? SHIPPING.KANO_FREE_THRESHOLD : SHIPPING.NIGERIA_FREE_THRESHOLD;
   if (subtotal >= threshold) return `Free delivery (orders ≥ ₦${threshold.toLocaleString('en-NG')})`;
-  return `₦${FLAT_RATE.toLocaleString('en-NG')} — Free over ₦${threshold.toLocaleString('en-NG')}`;
+  return `₦${SHIPPING.FLAT_RATE.toLocaleString('en-NG')} — Free over ₦${threshold.toLocaleString('en-NG')}`;
 }
 
 export default function Checkout() {
   const { cartItems, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const [deliveryMethod, setDeliveryMethod] = useState('home');
+  const [deliveryMethod, setDeliveryMethod] = useState(DELIVERY_METHODS.HOME);
   const [step,    setStep]    = useState(0);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -71,7 +66,7 @@ export default function Checkout() {
     if (!customerName.trim()) return 'Please enter your full name.';
     if (!/\S+@\S+\.\S+/.test(email)) return 'Please enter a valid email address.';
     if (!phone.trim()) return 'Please enter your phone number.';
-    if (deliveryMethod === 'home') {
+    if (deliveryMethod === DELIVERY_METHODS.HOME) {
       if (!address.trim()) return 'Please enter your delivery address.';
       if (!city.trim()) return 'Please enter your city.';
     }
@@ -102,10 +97,9 @@ export default function Checkout() {
         subtotal,
         shipping,
         total,
-        paymentMethod: 'paystack',
+        paymentMethod: PAYMENT_METHODS.PAYSTACK,
       });
       newOrderId = record.id;
-      // Best-effort stock decrement — silently ignored if permissions disallow it
       cartItems.forEach(i => decrementStock(i.id, i.quantity));
     } catch {
       setLoading(false);
@@ -195,11 +189,11 @@ export default function Checkout() {
                   <p className="block mb-3 text-xs tracking-wider uppercase font-body text-stone-500">Delivery Method *</p>
                   <div className="grid grid-cols-2 gap-3">
                     <label className={`flex items-start gap-3 p-3 border-2 cursor-pointer transition-colors ${
-                      deliveryMethod === 'home' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
+                      deliveryMethod === DELIVERY_METHODS.HOME ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                     }`}>
                       <input type="radio" name="delivery" value="home"
-                        checked={deliveryMethod === 'home'}
-                        onChange={() => setDeliveryMethod('home')}
+                        checked={deliveryMethod === DELIVERY_METHODS.HOME}
+                        onChange={() => setDeliveryMethod(DELIVERY_METHODS.HOME)}
                         className="mt-0.5 accent-charcoal-900" />
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
@@ -208,18 +202,18 @@ export default function Checkout() {
                         </div>
                         <p className="font-body text-[10px] text-stone-400 leading-snug">
                           {form.state.toLowerCase() === 'kano'
-                            ? `Free over ₦${KANO_FREE_THRESHOLD.toLocaleString('en-NG')}`
-                            : `Free over ₦${NIGERIA_FREE_THRESHOLD.toLocaleString('en-NG')}`}
+                            ? `Free over ₦${SHIPPING.KANO_FREE_THRESHOLD.toLocaleString('en-NG')}`
+                            : `Free over ₦${SHIPPING.NIGERIA_FREE_THRESHOLD.toLocaleString('en-NG')}`}
                         </p>
                       </div>
                     </label>
 
                     <label className={`flex items-start gap-3 p-3 border-2 cursor-pointer transition-colors ${
-                      deliveryMethod === 'pickup' ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
+                      deliveryMethod === DELIVERY_METHODS.PICKUP ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                     }`}>
                       <input type="radio" name="delivery" value="pickup"
-                        checked={deliveryMethod === 'pickup'}
-                        onChange={() => setDeliveryMethod('pickup')}
+                        checked={deliveryMethod === DELIVERY_METHODS.PICKUP}
+                        onChange={() => setDeliveryMethod(DELIVERY_METHODS.PICKUP)}
                         className="mt-0.5 accent-charcoal-900" />
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
@@ -231,7 +225,7 @@ export default function Checkout() {
                     </label>
                   </div>
 
-                  {deliveryMethod === 'pickup' && (
+                  {deliveryMethod === DELIVERY_METHODS.PICKUP && (
                     <p className="pl-1 mt-2 text-xs font-body text-stone-500">
                       Pick up at our Kano store. We'll send the exact address after you order.
                     </p>
@@ -256,7 +250,7 @@ export default function Checkout() {
                       placeholder="+234 800 000 0000" className="input-field" />
                   </div>
 
-                  {deliveryMethod === 'home' && (
+                  {deliveryMethod === DELIVERY_METHODS.HOME && (
                     <>
                       <div className="sm:col-span-2">
                         <label className="font-body text-xs tracking-wider uppercase text-stone-500 block mb-1.5">Street Address *</label>
@@ -307,7 +301,7 @@ export default function Checkout() {
                   <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Name</span><br />{form.customerName}</p>
                   <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Email</span><br />{form.email}</p>
                   <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Phone</span><br />{form.phone}</p>
-                  {deliveryMethod === 'pickup' ? (
+                  {deliveryMethod === DELIVERY_METHODS.PICKUP ? (
                     <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Delivery</span><br />Store Pickup — Kano</p>
                   ) : (
                     <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Delivery</span><br />{form.address}, {form.city}, {form.state}</p>
@@ -391,7 +385,7 @@ export default function Checkout() {
                   <span className="text-charcoal-800">₦{subtotal.toLocaleString('en-NG')}</span>
                 </div>
                 <div className="flex justify-between text-sm font-body text-stone-500">
-                  <span>{deliveryMethod === 'pickup' ? 'Store Pickup' : 'Delivery'}</span>
+                  <span>{deliveryMethod === DELIVERY_METHODS.PICKUP ? 'Store Pickup' : 'Delivery'}</span>
                   <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-charcoal-800'}>
                     {shipping === 0 ? 'Free' : `₦${shipping.toLocaleString('en-NG')}`}
                   </span>

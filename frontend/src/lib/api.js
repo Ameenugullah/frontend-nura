@@ -1,5 +1,6 @@
 import pb from './pocketbase';
 import { normalize } from './categories';
+import { PAYMENT_METHODS } from './orderConstants';
 
 let _productsCache    = null;
 let _productsCacheTs  = 0;
@@ -162,7 +163,7 @@ export async function createOrder(data) {
     shipping:       data.shipping,
     tax:            data.tax            || 0,
     total:          data.total,
-    paymentMethod:  data.paymentMethod  || 'online',
+    paymentMethod:  data.paymentMethod  || PAYMENT_METHODS.PAYSTACK,
     paymentRef:     data.paymentRef     || '',
     paymentStatus:  'unpaid',
     status:         'pending',

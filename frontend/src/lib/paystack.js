@@ -1,11 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// lib/paystack.js  —  Paystack payment integration
-//
-// ENV VARIABLE (set in Railway → frontend-nura → Variables):
-//   VITE_PAYSTACK_PUBLIC_KEY   — from dashboard.paystack.com/#/settings/developer
-//                                Use pk_test_... for testing, pk_live_... for production
-// ─────────────────────────────────────────────────────────────────────────────
-
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
 function loadPaystackScript() {
@@ -19,24 +11,6 @@ function loadPaystackScript() {
   });
 }
 
-/**
- * Opens the Paystack inline payment popup.
- *
- * Security model:
- *   - The frontend NEVER marks an order as paid.
- *   - After popup closes (success or cancel), the user is redirected to the
- *     polling screen (/order/:id/verifying).
- *   - PocketBase only marks paymentStatus = "paid" after the server-side
- *     Paystack webhook independently verifies the transaction signature.
- *
- * @param {object} opts
- * @param {string}   opts.email
- * @param {number}   opts.amount       — Naira (converted to kobo internally)
- * @param {string}   opts.orderId      — PocketBase order ID
- * @param {string}   [opts.name]
- * @param {string}   [opts.phone]
- * @param {function} opts.onPopupClosed — Called with { reference, cancelled: boolean }
- */
 export async function initializePaystackPayment({
   email, amount, orderId, name, phone, onPopupClosed,
 }) {
@@ -53,7 +27,7 @@ export async function initializePaystackPayment({
   const handler = window.PaystackPop.setup({
     key:      PAYSTACK_PUBLIC_KEY,
     email,
-    amount:   Math.round(amount * 100), // convert Naira → kobo
+    amount:   Math.round(amount * 100),
     currency: 'NGN',
     ref:      reference,
     metadata: {
@@ -65,8 +39,6 @@ export async function initializePaystackPayment({
       ],
     },
     callback: () => {
-      // Paystack calls this on successful charge — do NOT trust it as proof.
-      // Redirect to the polling screen; the backend webhook is the source of truth.
       onPopupClosed?.({ reference, cancelled: false });
     },
     onClose: () => {

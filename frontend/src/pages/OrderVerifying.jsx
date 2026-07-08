@@ -4,16 +4,11 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { getOrderById, pollOrderPaymentStatus } from '../lib/api';
 import { useCart } from '../context/CartContext';
 
-// This page is the ONLY place an order is ever shown as "paid" to the
-// customer. It polls PocketBase, which itself only flips paymentStatus to
-// "paid" after the server-side Paystack webhook hook independently verifies
-// the transaction (see backend/pb_hooks/payments.pb.js). The frontend never
-// decides payment success on its own.
 export default function OrderVerifying() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { clearCart } = useCart();
-  const [state, setState] = useState('verifying'); // verifying | paid | failed | timeout
+  const [state, setState] = useState('verifying');
   const [order, setOrder] = useState(null);
   const cartClearedRef = useRef(false);
 
@@ -36,7 +31,6 @@ export default function OrderVerifying() {
         }
       } catch {
         if (!cancelled) setState('timeout');
-        // fetch whatever we have for display purposes even on timeout
         try {
           const fallback = await getOrderById(id);
           if (!cancelled) setOrder(fallback);
