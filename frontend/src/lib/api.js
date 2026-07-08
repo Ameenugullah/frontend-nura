@@ -234,7 +234,6 @@ export async function getOrdersByEmail(email) {
     const params = new URLSearchParams();
     params.set('filter', `email = "${email.replace(/"/g, '\\"')}"`);
     params.set('perPage', '200');
-    params.set('sort', '-created');
 
     const headers = { 'Content-Type': 'application/json' };
     if (pb.authStore.token) headers['Authorization'] = 'Bearer ' + pb.authStore.token;
