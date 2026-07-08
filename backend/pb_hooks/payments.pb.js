@@ -1,11 +1,35 @@
 /// <reference path="../pb_data/types.d.ts" />
 
+// Simple in-memory sliding-window limiter for /api/verify-payment — this route
+// triggers an outbound call to Paystack per request, so it's worth capping per-IP
+// abuse (reference guessing / accidental retry storms). Module-scope state persists
+// for the life of the process; on a single Railway instance that's sufficient, but
+// it resets on redeploy and doesn't share state across horizontally-scaled instances.
+var _verifyRateLimit = {};
+function _isRateLimited(ip) {
+  var now    = Date.now();
+  var windowMs = 60 * 1000;
+  var maxHits  = 10;
+
+  var hits = (_verifyRateLimit[ip] || []).filter(function(t) { return now - t < windowMs; });
+  hits.push(now);
+  _verifyRateLimit[ip] = hits;
+
+  return hits.length > maxHits;
+}
+
 // Called by the frontend immediately after the Paystack inline popup reports
 // success, so payment confirmation doesn't depend solely on the Paystack
 // dashboard webhook being configured/delivered. The client only ever supplies
 // orderId + reference — the actual paid/failed determination and the amount
 // comparison happen here, server-side, against Paystack's own verify API.
 routerAdd("POST", "/api/verify-payment", function(e) {
+  var ip = e.request.realIP();
+  if (_isRateLimited(ip)) {
+    $app.logger().warn("verify-payment: rate limited", "ip", ip);
+    return e.json(429, { error: "too many requests" });
+  }
+
   $app.logger().info("verify-payment: request received");
 
   var secret = $os.getenv("PAYSTACK_SECRET_KEY");
