@@ -15,11 +15,26 @@ var SHIPPING_NG_FREE     = 300000;
 var PRICE_EPSILON        = 1; // naira — tolerance for float rounding, not a fraud gap
 
 onRecordCreate((e) => {
-  var itemsStr = e.record.getString("items");
+  $app.logger().info("Order create: validating pricing");
+
+  // e.record here is the incoming, not-yet-saved record bound straight from the
+  // HTTP request body. Unlike a record re-fetched after save (e.g. in
+  // payments.pb.js/emails.pb.js, where getString("items") reliably returns the
+  // raw JSON text), a JSON-type field on an unsaved incoming record may already
+  // be bound as a native array/object rather than a string — handle both shapes.
+  var itemsRaw = e.record.get("items");
   var items;
-  try {
-    items = JSON.parse(itemsStr || "[]");
-  } catch (err) {
+  if (Array.isArray(itemsRaw)) {
+    items = itemsRaw;
+  } else if (typeof itemsRaw === "string") {
+    try {
+      items = JSON.parse(itemsRaw || "[]");
+    } catch (err) {
+      $app.logger().error("Order create: could not parse items string", "raw", itemsRaw, "error", String(err));
+      throw new BadRequestError("Invalid items payload.");
+    }
+  } else {
+    $app.logger().error("Order create: unexpected items type", "type", typeof itemsRaw);
     throw new BadRequestError("Invalid items payload.");
   }
 
@@ -42,6 +57,7 @@ onRecordCreate((e) => {
     try {
       product = $app.findRecordById("products", item.id);
     } catch (err) {
+      $app.logger().error("Order create: unknown product", "productId", item.id, "error", String(err));
       throw new BadRequestError("Unknown product in order: " + item.id);
     }
 
