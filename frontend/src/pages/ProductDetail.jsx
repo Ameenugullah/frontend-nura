@@ -254,7 +254,7 @@ export default function ProductDetail() {
 
             <div className="pt-5 space-y-3 border-t border-stone-200">
               {[
-                { icon: Truck,     text: 'Free delivery in Kano over ₦200,000 · Nationwide over ₦300,000' },
+                { icon: Truck,     text: 'Nationwide delivery or in-store pickup in Kano' },
                 { icon: RotateCcw, text: 'Returns accepted within 7 days' },
               ].map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-3">

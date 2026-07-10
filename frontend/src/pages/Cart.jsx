@@ -7,10 +7,7 @@ const FALLBACK = '/images/placeholder-product.svg';
 export default function Cart() {
   const { cartItems, removeFromCart, updateQuantity, subtotal, cartCount } = useCart();
 
-  // Nationwide free-shipping threshold (Kano threshold is lower — exact calc happens at checkout)
-  const FREE_SHIPPING_THRESHOLD = 300_000;
-  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 2500;
-  const total    = subtotal + shipping;
+  const total = subtotal;
 
   if (!cartItems.length) {
     return (
@@ -109,17 +106,6 @@ export default function Cart() {
                   <span className="text-stone-500">Subtotal ({cartCount} items)</span>
                   <span>₦{subtotal.toLocaleString('en-NG')}</span>
                 </div>
-                <div className="flex justify-between text-sm font-body">
-                  <span className="text-stone-500">Shipping</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-medium' : ''}>
-                    {shipping === 0 ? 'Free' : `₦${shipping.toLocaleString('en-NG')}`}
-                  </span>
-                </div>
-                {shipping > 0 && (
-                  <p className="font-body text-[10px] text-stone-400">
-                    Add ₦{(FREE_SHIPPING_THRESHOLD - subtotal).toLocaleString('en-NG')} more for free shipping (final rate set at checkout)
-                  </p>
-                )}
               </div>
               <div className="pt-4 mb-6 border-t border-stone-200">
                 <div className="flex justify-between font-semibold font-body">

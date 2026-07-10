@@ -5,11 +5,11 @@ export default function FAQ() {
     <div className="min-h-screen pt-6 bg-stone-50">
       <div className="px-6 mx-auto max-w-6xl">
         <h1 className="text-3xl italic font-display mb-4">FAQ</h1>
-        <p className="text-sm text-stone-500 mb-6">Answers to common questions about orders, shipping, returns and sizing.</p>
+        <p className="text-sm text-stone-500 mb-6">Answers to common questions about orders, delivery, returns and sizing.</p>
 
         <section className="bg-white p-6 border border-stone-100 mb-4">
-          <h2 className="text-lg font-semibold mb-2">Shipping & delivery</h2>
-          <p className="text-sm text-stone-600">We ship across Nigeria via our selected courier partners. Orders over ₦500,000 qualify for free shipping.</p>
+          <h2 className="text-lg font-semibold mb-2">Pickup & delivery</h2>
+          <p className="text-sm text-stone-600">At checkout, choose to have your order delivered nationwide via our courier partners, or pick it up in person at our Kano store.</p>
         </section>
 
         <section className="bg-white p-6 border border-stone-100 mb-4">

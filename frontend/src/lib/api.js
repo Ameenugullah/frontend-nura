@@ -160,7 +160,6 @@ export async function createOrder(data) {
     country:        data.country        || 'NG',
     items:          JSON.stringify(data.items),
     subtotal:       data.subtotal,
-    shipping:       data.shipping,
     tax:            data.tax            || 0,
     total:          data.total,
     paymentMethod:  data.paymentMethod  || 'paystack',

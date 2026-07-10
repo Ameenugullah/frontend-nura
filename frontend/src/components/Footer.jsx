@@ -17,7 +17,7 @@ const quickLinks = [
   { label: 'About Us',          to: '/about' },
   { label: 'Contact Us',        to: '/contact' },
   { label: 'Track Order',       to: '/faq' },
-  { label: 'Shipping & Returns',to: '/faq' },
+  { label: 'Delivery & Returns',to: '/faq' },
 ];
 
 const categoryLinks = NAV_SECTIONS.map(s => ({

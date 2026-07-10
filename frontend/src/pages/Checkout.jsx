@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CreditCard, ChevronRight, Lock, Truck, Store } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createOrder, decrementStock, verifyPayment } from '../lib/api';
 import { initializePaystackPayment } from '../lib/paystack';
-import { PAYMENT_METHODS, DELIVERY_METHODS, SHIPPING } from '../lib/orderConstants';
+import { PAYMENT_METHODS, DELIVERY_METHODS } from '../lib/orderConstants';
 
 const STATES = [
   'Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno','Cross River',
@@ -15,27 +15,11 @@ const STATES = [
 
 const STEPS = ['Delivery', 'Pay'];
 
-function calcShipping(deliveryMethod, state, subtotal) {
-  if (deliveryMethod === DELIVERY_METHODS.PICKUP) return 0;
-  const isKano = state?.toLowerCase() === 'kano';
-  return subtotal >= (isKano ? SHIPPING.KANO_FREE_THRESHOLD : SHIPPING.NIGERIA_FREE_THRESHOLD)
-    ? 0
-    : SHIPPING.FLAT_RATE;
-}
-
-function shippingLabel(deliveryMethod, state, subtotal) {
-  if (deliveryMethod === DELIVERY_METHODS.PICKUP) return 'Store Pickup — Free';
-  const isKano    = state?.toLowerCase() === 'kano';
-  const threshold = isKano ? SHIPPING.KANO_FREE_THRESHOLD : SHIPPING.NIGERIA_FREE_THRESHOLD;
-  if (subtotal >= threshold) return `Free delivery (orders ≥ ₦${threshold.toLocaleString('en-NG')})`;
-  return `₦${SHIPPING.FLAT_RATE.toLocaleString('en-NG')} — Free over ₦${threshold.toLocaleString('en-NG')}`;
-}
-
 export default function Checkout() {
   const { cartItems, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const [deliveryMethod, setDeliveryMethod] = useState(DELIVERY_METHODS.HOME);
+  const [deliveryMethod, setDeliveryMethod] = useState(DELIVERY_METHODS.DELIVERY);
   const [step,    setStep]    = useState(0);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -50,11 +34,7 @@ export default function Checkout() {
     notes:        '',
   });
 
-  const shipping = useMemo(
-    () => calcShipping(deliveryMethod, form.state, subtotal),
-    [deliveryMethod, form.state, subtotal],
-  );
-  const total = subtotal + shipping;
+  const total = subtotal;
 
   const update = (key, val) => {
     setForm(f => ({ ...f, [key]: val }));
@@ -66,7 +46,7 @@ export default function Checkout() {
     if (!customerName.trim()) return 'Please enter your full name.';
     if (!/\S+@\S+\.\S+/.test(email)) return 'Please enter a valid email address.';
     if (!phone.trim()) return 'Please enter your phone number.';
-    if (deliveryMethod === DELIVERY_METHODS.HOME) {
+    if (deliveryMethod === DELIVERY_METHODS.DELIVERY) {
       if (!address.trim()) return 'Please enter your delivery address.';
       if (!city.trim()) return 'Please enter your city.';
     }
@@ -95,7 +75,6 @@ export default function Checkout() {
           color: i.color, size: i.size, quantity: i.quantity,
         })),
         subtotal,
-        shipping,
         total,
         paymentMethod: PAYMENT_METHODS.PAYSTACK,
       });
@@ -199,25 +178,20 @@ export default function Checkout() {
 
                 {/* Delivery method toggle */}
                 <div className="mb-6">
-                  <p className="block mb-3 text-xs tracking-wider uppercase font-body text-stone-500">Delivery Method *</p>
+                  <p className="block mb-3 text-xs tracking-wider uppercase font-body text-stone-500">How would you like to receive your order? *</p>
                   <div className="grid grid-cols-2 gap-3">
                     <label className={`flex items-start gap-3 p-3 border-2 cursor-pointer transition-colors ${
-                      deliveryMethod === DELIVERY_METHODS.HOME ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
+                      deliveryMethod === DELIVERY_METHODS.DELIVERY ? 'border-charcoal-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                     }`}>
-                      <input type="radio" name="delivery" value="home"
-                        checked={deliveryMethod === DELIVERY_METHODS.HOME}
-                        onChange={() => setDeliveryMethod(DELIVERY_METHODS.HOME)}
+                      <input type="radio" name="delivery" value="delivery"
+                        checked={deliveryMethod === DELIVERY_METHODS.DELIVERY}
+                        onChange={() => setDeliveryMethod(DELIVERY_METHODS.DELIVERY)}
                         className="mt-0.5 accent-charcoal-900" />
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
                           <Truck size={13} className="text-charcoal-700 shrink-0" />
-                          <span className="text-sm font-medium font-body text-charcoal-800">Home Delivery</span>
+                          <span className="text-sm font-medium font-body text-charcoal-800">Delivery</span>
                         </div>
-                        <p className="font-body text-[10px] text-stone-400 leading-snug">
-                          {form.state.toLowerCase() === 'kano'
-                            ? `Free over ₦${SHIPPING.KANO_FREE_THRESHOLD.toLocaleString('en-NG')}`
-                            : `Free over ₦${SHIPPING.NIGERIA_FREE_THRESHOLD.toLocaleString('en-NG')}`}
-                        </p>
                       </div>
                     </label>
 
@@ -231,9 +205,8 @@ export default function Checkout() {
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
                           <Store size={13} className="text-charcoal-700 shrink-0" />
-                          <span className="text-sm font-medium font-body text-charcoal-800">Store Pickup</span>
+                          <span className="text-sm font-medium font-body text-charcoal-800">Pickup</span>
                         </div>
-                        <p className="font-body text-[10px] text-green-600 font-medium">Always Free — ₦0</p>
                       </div>
                     </label>
                   </div>
@@ -263,7 +236,7 @@ export default function Checkout() {
                       placeholder="+234 800 000 0000" className="input-field" />
                   </div>
 
-                  {deliveryMethod === DELIVERY_METHODS.HOME && (
+                  {deliveryMethod === DELIVERY_METHODS.DELIVERY && (
                     <>
                       <div className="sm:col-span-2">
                         <label className="font-body text-xs tracking-wider uppercase text-stone-500 block mb-1.5">Street Address *</label>
@@ -315,9 +288,9 @@ export default function Checkout() {
                   <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Email</span><br />{form.email}</p>
                   <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Phone</span><br />{form.phone}</p>
                   {deliveryMethod === DELIVERY_METHODS.PICKUP ? (
-                    <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Delivery</span><br />Store Pickup — Kano</p>
+                    <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Receive Order</span><br />Pickup — Kano</p>
                   ) : (
-                    <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Delivery</span><br />{form.address}, {form.city}, {form.state}</p>
+                    <p><span className="text-stone-400 uppercase tracking-wider text-[10px]">Receive Order</span><br />Delivery to {form.address}, {form.city}, {form.state}</p>
                   )}
                 </div>
 
@@ -360,7 +333,10 @@ export default function Checkout() {
           {/* ── Right: order summary ── */}
           <div className="lg:col-span-2 lg:sticky lg:top-28">
             <div className="p-6 bg-white border border-stone-200">
-              <h3 className="mb-5 text-xl font-light font-display text-charcoal-800">Order Summary</h3>
+              <h3 className="mb-1 text-xl font-light font-display text-charcoal-800">Order Summary</h3>
+              <p className="mb-5 font-body text-xs text-stone-400">
+                {deliveryMethod === DELIVERY_METHODS.PICKUP ? 'Pickup' : 'Delivery'}
+              </p>
 
               <div className="mb-5 space-y-3 overflow-y-auto max-h-64 no-scrollbar">
                 {cartItems.map(item => (
@@ -397,17 +373,6 @@ export default function Checkout() {
                   <span>Subtotal</span>
                   <span className="text-charcoal-800">₦{subtotal.toLocaleString('en-NG')}</span>
                 </div>
-                <div className="flex justify-between text-sm font-body text-stone-500">
-                  <span>{deliveryMethod === DELIVERY_METHODS.PICKUP ? 'Store Pickup' : 'Delivery'}</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-charcoal-800'}>
-                    {shipping === 0 ? 'Free' : `₦${shipping.toLocaleString('en-NG')}`}
-                  </span>
-                </div>
-                {shipping > 0 && (
-                  <p className="font-body text-[10px] text-stone-400 text-right leading-snug">
-                    {shippingLabel(deliveryMethod, form.state, subtotal)}
-                  </p>
-                )}
               </div>
 
               <div className="pt-4 mt-4 border-t border-stone-200">

@@ -14,7 +14,6 @@ function sendOrderConfirmationEmail(record) {
   });
 
   const isPickup = record.getString("address") === "STORE PICKUP";
-  const shipping = Number(record.getFloat("shipping") || 0);
   const subtotal = Number(record.getFloat("subtotal") || 0);
   const total    = Number(record.getFloat("total")    || 0);
 
@@ -33,7 +32,6 @@ function sendOrderConfirmationEmail(record) {
     state:   record.getString("state"),
     items,
     subtotal,
-    shipping,
     total,
     adminUrl: SITE_URL + "/admin/orders",
   };
@@ -71,12 +69,8 @@ function buildHtmlEmail(d) {
 
   var deliveryHtml = d.isPickup
     ? "<p style='font-size:13px;color:#1a1a1a;'>Store Pickup — Kano</p>"
-    : "<p style='font-size:13px;color:#1a1a1a;'>Home Delivery</p>" +
+    : "<p style='font-size:13px;color:#1a1a1a;'>Delivery</p>" +
       "<p style='font-size:13px;color:#7a7068;margin-top:4px;'>" + escHtml(d.address) + ", " + escHtml(d.city) + (d.state ? ", " + escHtml(d.state) : "") + "</p>";
-
-  var shippingDisplay = d.shipping === 0
-    ? "<span style='color:#22c55e;font-weight:600;'>FREE</span>"
-    : "₦" + d.shipping.toLocaleString("en-NG");
 
   return "<!DOCTYPE html><html lang='en'><head>" +
     "<meta charset='utf-8'/>" +
@@ -131,7 +125,6 @@ function buildHtmlEmail(d) {
       "</div>" +
       "<div class='totals'>" +
         "<div class='tr'><span>Subtotal</span><span>₦" + d.subtotal.toLocaleString("en-NG") + "</span></div>" +
-        "<div class='tr'><span>Shipping</span><span>" + shippingDisplay + "</span></div>" +
         "<div class='tr grand'><span>Total Paid</span><span style='color:#c94f7a;'>₦" + d.total.toLocaleString("en-NG") + "</span></div>" +
       "</div>" +
       "<div class='ftr'>" +
@@ -152,7 +145,7 @@ function buildPlainEmail(d) {
 
   var deliveryLine = d.isPickup
     ? "Store Pickup (customer will collect from Kano store)"
-    : "Home Delivery\n  " + d.address + ", " + d.city + (d.state ? ", " + d.state : "");
+    : "Delivery\n  " + d.address + ", " + d.city + (d.state ? ", " + d.state : "");
 
   return [
     "NEW PAID ORDER — NURA BAHAR NIGERIA", sep, "",
@@ -171,7 +164,6 @@ function buildPlainEmail(d) {
     itemLines || "No items recorded", "",
     sep, "TOTALS", sep,
     "Subtotal: ₦" + d.subtotal.toLocaleString("en-NG"),
-    "Shipping: " + (d.shipping === 0 ? "FREE" : "₦" + d.shipping.toLocaleString("en-NG")),
     "TOTAL:    ₦" + d.total.toLocaleString("en-NG"), "",
     sep,
     "Nura Bahar Nigeria",

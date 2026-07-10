@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, Truck, RotateCcw, Lock, Star, Sparkles } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, RotateCcw, Lock, Star, Sparkles } from 'lucide-react';
 import { getProducts } from '../lib/api';
 import { matchesGender, isFragrance } from '../lib/categories';
 import ProductCard from '../components/ProductCard';
@@ -29,7 +29,6 @@ const heroSlides = [
 ];
 
 const perks = [
-  { icon: Truck,     label: 'Free Shipping',         sub: 'Kano ₦200k · Nationwide ₦300k' },
   { icon: Lock,      label: 'Money Back Guarantee',  sub: 'Within 7 days' },
   { icon: Star,      label: 'Online Support 24/7',   sub: 'We reply on WhatsApp' },
   { icon: RotateCcw, label: 'Secure Payment',        sub: 'Paystack & bank transfer' },

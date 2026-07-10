@@ -23,12 +23,6 @@ export const PAYMENT_STATUSES = {
 };
 
 export const DELIVERY_METHODS = {
-  HOME:   'home',
-  PICKUP: 'pickup',
-};
-
-export const SHIPPING = {
-  FLAT_RATE:              2_500,
-  KANO_FREE_THRESHOLD:    200_000,
-  NIGERIA_FREE_THRESHOLD: 300_000,
+  DELIVERY: 'delivery',
+  PICKUP:   'pickup',
 };

@@ -6,7 +6,6 @@ export default function Ticker({
   textClass = 'text-charcoal-700/60',
 }) {
   const defaultItems = [
-    'Free shipping: Kano ₦200k · Nationwide ₦300k',
     'Handcrafted Nigerian fashion',
     'Authentic boubous & gowns',
     'Secure payment via Paystack',

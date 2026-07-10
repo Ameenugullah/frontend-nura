@@ -55,10 +55,6 @@ export default function Navbar() {
 
   return (
     <>
-      <div className="py-2 text-xs tracking-wider text-center bg-charcoal-900 text-stone-200 font-body">
-        Free shipping in Kano over ₦200,000 · Nationwide over ₦300,000 &nbsp;·&nbsp; <Link to="/faq" className="underline underline-offset-2">Size guide</Link>
-      </div>
-
       <header className={'sticky top-0 z-50 transition-all duration-300 ' + (
         isTransparent
           ? 'bg-transparent border-b border-transparent'

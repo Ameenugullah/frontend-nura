@@ -343,7 +343,6 @@
             { "id": "text1400097126", "name": "country", "type": "text", "required": false },
             { "id": "json3776899405", "name": "items", "type": "json", "required": true },
             { "id": "number3097235076", "name": "subtotal", "type": "number", "required": true },
-            { "id": "number756815652", "name": "shipping", "type": "number", "required": false },
             { "id": "number2390866550", "name": "tax", "type": "number", "required": false },
             { "id": "number3257917790", "name": "total", "type": "number", "required": true },
             { "id": "select2223302008", "name": "paymentMethod", "type": "select", "required": false, "maxSelect": 1, "values": ["online", "whatsapp"] },
