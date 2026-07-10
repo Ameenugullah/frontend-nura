@@ -20,11 +20,10 @@ export default function About() {
         </div>
         <div className="relative max-w-4xl px-6 mx-auto text-center">
           <p className="font-body text-[10px] tracking-[0.3em] uppercase text-blush-400 mb-4">Our Story</p>
-          <h1 className="mb-6 text-5xl italic font-light leading-tight text-white font-display sm:text-6xl">
-            Crafted in Kano.<br />Worn Across Nigeria.
-          </h1>
           <p className="max-w-2xl mx-auto text-lg leading-relaxed font-body text-stone-300">
-            Nura Bahar Nigeria was founded on a simple belief — that authentic Nigerian fashion deserves a premium platform, and every Nigerian deserves to wear their heritage with pride.
+            A Nigerian fashion brand inspired by the grace of Sudanese heritage.<br />
+            Where modesty meets elegance through thoughtfully crafted designs.<br />
+            Celebrating timeless beauty, individuality, and refined style since 2017.
           </p>
         </div>
       </section>

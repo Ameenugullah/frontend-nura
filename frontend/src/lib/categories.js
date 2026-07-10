@@ -5,7 +5,7 @@ export const GENDERS = {
 
 export const CATEGORIES = {
   TWO_PIECE:    'Two Piece',
-  BOUBOUS:      'Boubou',
+  BOUBOUS:      'Boubous',
   LUNA_DRESS:   'Luna Dress',
   SUMMER_DRESS: 'Summer Dress',
   AYA_DRESS:    'Aya Dress',

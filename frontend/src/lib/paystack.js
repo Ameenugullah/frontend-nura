@@ -30,6 +30,7 @@ export async function initializePaystackPayment({
     amount:   Math.round(amount * 100),
     currency: 'NGN',
     ref:      reference,
+    channels: ['card', 'bank', 'ussd', 'bank_transfer', 'mobile_money', 'qr'],
     metadata: {
       order_id: orderId,
       custom_fields: [
