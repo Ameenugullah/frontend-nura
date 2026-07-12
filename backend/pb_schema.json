@@ -265,27 +265,6 @@
         "fileToken": { "duration": 180 }
     },
     {
-        "id": "pbc_4181706888",
-        "listRule": "",
-        "viewRule": "",
-        "createRule": null,
-        "updateRule": null,
-        "deleteRule": null,
-        "name": "instagram_grid",
-        "type": "base",
-        "fields": [
-            { "id": "text3208210256", "name": "id", "type": "text", "primaryKey": true, "required": true, "system": true },
-            { "id": "file3309110367", "name": "image", "type": "file", "required": true, "maxSelect": 0, "maxSize": 0, "mimeTypes": null },
-            { "id": "text4135340389", "name": "caption", "type": "text", "required": false },
-            { "id": "url917281265", "name": "link", "type": "url", "required": false },
-            { "id": "number4113142680", "name": "sort_order", "type": "number", "required": false },
-            { "id": "text1335462138", "name": "media_type", "type": "text", "required": false },
-            { "id": "file2093472300", "name": "video", "type": "file", "required": false, "maxSelect": 1, "maxSize": 52428800, "mimeTypes": ["video/webm", "video/mp4"] }
-        ],
-        "indexes": [],
-        "system": false
-    },
-    {
         "id": "pbc_2151003480",
         "listRule": "@request.auth.id != ''",
         "viewRule": "@request.auth.id != ''",
