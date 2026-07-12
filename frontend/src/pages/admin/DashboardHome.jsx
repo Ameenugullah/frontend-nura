@@ -44,7 +44,7 @@ export default function DashboardHome() {
           <p className="py-10 text-xs text-center font-body text-stone-400">No orders yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[560px]">
               <thead className="bg-stone-50">
                 <tr className="text-left font-body text-[10px] tracking-[0.15em] uppercase text-stone-400">
                   <th className="px-5 py-3">Order</th>
@@ -57,11 +57,11 @@ export default function DashboardHome() {
               <tbody>
                 {recent.map(o => (
                   <tr key={o.id} className="transition-colors border-t border-stone-100 hover:bg-stone-50">
-                    <td className="px-5 py-3 text-xs font-medium font-body text-charcoal-700">NB-{o.id.slice(-6)}</td>
-                    <td className="px-5 py-3 text-xs font-body text-charcoal-700">{o.customerName}</td>
-                    <td className="px-5 py-3 text-xs font-body text-charcoal-700">₦{(o.total || 0).toLocaleString('en-NG')}</td>
-                    <td className="px-5 py-3 text-xs capitalize font-body text-charcoal-700">{o.paymentMethod || '—'}</td>
-                    <td className="px-5 py-3"><StatusBadge status={o.status} /></td>
+                    <td className="px-5 py-3 text-xs font-medium font-body text-charcoal-700 whitespace-nowrap">NB-{o.id.slice(-6)}</td>
+                    <td className="px-5 py-3 text-xs font-body text-charcoal-700 whitespace-nowrap">{o.customerName}</td>
+                    <td className="px-5 py-3 text-xs font-body text-charcoal-700 whitespace-nowrap">₦{(o.total || 0).toLocaleString('en-NG')}</td>
+                    <td className="px-5 py-3 text-xs capitalize font-body text-charcoal-700 whitespace-nowrap">{o.paymentMethod || '—'}</td>
+                    <td className="px-5 py-3 whitespace-nowrap"><StatusBadge status={o.status} /></td>
                   </tr>
                 ))}
               </tbody>
